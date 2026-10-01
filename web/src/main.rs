@@ -1,13 +1,32 @@
-use topcoat::router::{Router, RouterBuilderDiscoverExt};
+use auth::AuthService;
+use topcoat::{
+    asset::{AssetBundle, RouterBuilderAssetExt},
+    cookie::RouterBuilderCookieExt,
+    router::{Router, RouterBuilderDiscoverExt},
+    runtime::RouterBuilderRuntimeExt,
+    session::{RouterBuilderSessionExt, SessionConfig},
+};
 
 #[tokio::main]
 async fn main() {
     let cfg = config::Config::load().expect("failed to load config");
-    let _pool = db::connect(&cfg.database.url())
+    let pool = db::connect(&cfg.database.url())
         .await
         .expect("failed to connect to database");
+    let auth = AuthService::new(pool);
 
-    topcoat::start(Router::builder().discover().build())
-        .await
-        .unwrap();
+    let router = Router::builder()
+        .discover()
+        .cookies()
+        .sessions(SessionConfig::default())
+        .assets(AssetBundle::load().expect("failed to load asset bundle"))
+        .app_context(auth)
+        .runtime()
+        .build();
+
+    topcoat::start(router).await.unwrap();
 }
+
+mod layout;
+mod pages;
+mod session;

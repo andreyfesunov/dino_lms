@@ -9,7 +9,13 @@ name = "web"
 path = "src/main.rs"
 
 [dependencies]
+auth.workspace = true
 config.workspace = true
 db.workspace = true
+kernel.workspace = true
+serde.workspace = true
 tokio.workspace = true
-topcoat.workspace = true
+topcoat = { workspace = true, features = ["tailwind"] }
+
+[build-dependencies]
+topcoat = { workspace = true, features = ["tailwind"] }

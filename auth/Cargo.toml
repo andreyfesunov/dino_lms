@@ -1,0 +1,17 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "auth"
+version.workspace = true
+
+[dependencies]
+argon2.workspace = true
+async-trait.workspace = true
+db.workspace = true
+hex.workspace = true
+kernel.workspace = true
+rand.workspace = true
+serde.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
