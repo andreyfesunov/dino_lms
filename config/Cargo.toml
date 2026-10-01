@@ -1,0 +1,9 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "config"
+version.workspace = true
+
+[dependencies]
+figment.workspace = true
+serde.workspace = true

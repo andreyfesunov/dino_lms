@@ -1,15 +1,15 @@
 [package]
 edition.workspace = true
 license.workspace = true
-name = "web"
+name = "initializer"
 version.workspace = true
 
 [[bin]]
-name = "web"
+name = "initializer"
 path = "src/main.rs"
 
 [dependencies]
+clap.workspace = true
 config.workspace = true
 db.workspace = true
 tokio.workspace = true
-topcoat.workspace = true
