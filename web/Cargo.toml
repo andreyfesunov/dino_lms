@@ -1,0 +1,13 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "web"
+version.workspace = true
+
+[[bin]]
+name = "web"
+path = "src/main.rs"
+
+[dependencies]
+tokio.workspace = true
+topcoat.workspace = true
