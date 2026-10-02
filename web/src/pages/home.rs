@@ -1,6 +1,6 @@
 use crate::{
     i18n::{t, t_args},
-    session::current_actor,
+    session::{current_user, require_onboarded},
 };
 use auth::{AuthService, Permission};
 use topcoat::{
@@ -12,43 +12,53 @@ use topcoat::{
 
 #[page("/")]
 async fn home(cx: &Cx) -> Result<impl View> {
-    let actor = current_actor(cx).await?;
-    let signed_in = actor.is_some();
-    let user_label = actor
-        .as_ref()
-        .map(|actor| actor.user_id.to_string())
-        .unwrap_or_default();
+    let user = current_user(cx).await?;
+    let signed_in = user.is_some();
+
+    if signed_in {
+        let _ = require_onboarded(cx).await?;
+    }
+
     let auth: &AuthService = app_context(cx);
-    let can_create_student = actor
-        .as_ref()
-        .is_some_and(|actor| auth.permits(actor, Permission::CreateStudentAccount));
+    let can_manage_users = user.as_ref().is_some_and(|u| {
+        let actor = kernel::Actor::new(u.id, [u.role]);
+        auth.permits(&actor, Permission::ManageUsers)
+    });
 
     let welcome = t(cx, "home-welcome");
-    let signed_in_as = t_args(cx, "home-signed-in", [("user", user_label.into())]);
-    let create_student = t(cx, "home-create-student");
+    let display = user.as_ref().map(|u| u.display_name()).unwrap_or_default();
+    let signed_in_as = t_args(cx, "home-signed-in", [("user", display.into())]);
+    let manage_users = t(cx, "home-manage-users");
     let log_out = t(cx, "home-log-out");
     let sign_in_prompt = t(cx, "home-sign-in-prompt");
     let log_in = t(cx, "home-log-in");
+    let open_settings = t(cx, "home-open-settings");
 
     Ok(view! {
-        <section class="space-y-6">
-            <h1 class="text-3xl font-semibold tracking-tight">(welcome)</h1>
+        <section class="space-y-6 rounded-xl bg-surface p-6 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8">
+            <h1 class="font-heading text-3xl font-semibold tracking-tight text-text">(welcome)</h1>
             if signed_in {
-                <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-                    <p class="text-zinc-700">(signed_in_as)</p>
-                    <div class="mt-4 flex flex-wrap gap-3">
-                        if can_create_student {
+                <div class="space-y-4">
+                    <p class="font-body text-text-secondary">(signed_in_as)</p>
+                    <div class="flex flex-wrap gap-3">
+                        if can_manage_users {
                             <a
-                                href="/students/new"
-                                class="inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                                href="/users"
+                                class="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-text-inverse hover:bg-inverse"
                             >
-                                (create_student)
+                                (manage_users)
                             </a>
                         }
+                        <a
+                            href="/settings"
+                            class="inline-flex rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-input"
+                        >
+                            (open_settings)
+                        </a>
                         <form method="post" action="/logout">
                             <button
                                 type="submit"
-                                class="inline-flex rounded-md border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
+                                class="inline-flex rounded-md border border-border bg-surface px-4 py-2 text-sm font-medium text-text hover:bg-input"
                             >
                                 (log_out)
                             </button>
@@ -56,11 +66,11 @@ async fn home(cx: &Cx) -> Result<impl View> {
                     </div>
                 </div>
             } else {
-                <div class="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-                    <p class="text-zinc-600">(sign_in_prompt)</p>
+                <div class="space-y-4">
+                    <p class="font-body text-text-secondary">(sign_in_prompt)</p>
                     <a
                         href="/login"
-                        class="mt-4 inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                        class="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-text-inverse hover:bg-inverse"
                     >
                         (log_in)
                     </a>

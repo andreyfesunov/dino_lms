@@ -1,103 +1,18 @@
-use auth::{AuthService, CreateStudentCommand, Permission};
-use serde::Deserialize;
 use topcoat::{
     Result,
-    context::{Cx, app_context},
-    router::{content::Form, page},
-    view::{View, view},
+    router::{
+        error::{SeeOther, see_other},
+        route,
+    },
 };
 
-use crate::{
-    i18n::{auth_error, t},
-    session::require_permission,
-};
-
-#[derive(Debug, Deserialize)]
-pub struct CreateStudentForm {
-    pub login: String,
+/// Legacy create-student routes — redirect to the users admin screen.
+#[route(GET "/students/new")]
+async fn create_student_redirect() -> Result<SeeOther> {
+    Ok(see_other("/users"))
 }
 
-#[page("/students/new")]
-async fn create_student_page(cx: &Cx) -> Result<impl View> {
-    let _actor = require_permission(cx, Permission::CreateStudentAccount).await?;
-
-    let title = t(cx, "student-create-title");
-    let hint = t(cx, "student-create-hint");
-    let login_label = t(cx, "student-login-label");
-    let submit = t(cx, "student-create-submit");
-    let back = t(cx, "student-back");
-
-    Ok(view! {
-        <section class="mx-auto max-w-md space-y-6">
-            <h1 class="text-3xl font-semibold tracking-tight">(title)</h1>
-            <p class="text-sm text-zinc-600">(hint)</p>
-            <form method="post" action="/students" class="space-y-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-                <label class="block space-y-2 text-sm font-medium text-zinc-700">
-                    (login_label)
-                    <input
-                        name="login"
-                        required=""
-                        autocomplete="off"
-                        class="block w-full rounded-md border border-zinc-300 px-3 py-2 text-zinc-900 shadow-sm focus:border-zinc-500 focus:outline-none"
-                    />
-                </label>
-                <button
-                    type="submit"
-                    class="inline-flex w-full justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-                >
-                    (submit)
-                </button>
-            </form>
-            <p><a href="/" class="text-sm text-zinc-600 hover:text-zinc-900">(back)</a></p>
-        </section>
-    })
-}
-
-#[page(POST "/students")]
-async fn create_student_form(cx: &Cx, Form(input): Form<CreateStudentForm>) -> Result<impl View> {
-    let actor = require_permission(cx, Permission::CreateStudentAccount).await?;
-    let auth: &AuthService = app_context(cx);
-    let result = auth
-        .create_student(
-            &actor,
-            CreateStudentCommand {
-                login: input.login,
-                password: None,
-            },
-        )
-        .await
-        .map_err(|error| auth_error(cx, error))?;
-
-    let temporary_password = result
-        .temporary_password
-        .unwrap_or_else(|| t(cx, "student-created-password-supplied"));
-
-    let title = t(cx, "student-created-title");
-    let login_label = t(cx, "student-created-login-label");
-    let password_label = t(cx, "student-created-password-label");
-    let copy_hint = t(cx, "student-created-copy-hint");
-    let create_another = t(cx, "student-create-another");
-    let home = t(cx, "student-home");
-    let login = result.login;
-
-    Ok(view! {
-        <section class="mx-auto max-w-md space-y-6">
-            <h1 class="text-3xl font-semibold tracking-tight">(title)</h1>
-            <div class="space-y-3 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-                <p class="text-zinc-700">
-                    (login_label) " "
-                    <span class="font-medium">(login)</span>
-                </p>
-                <p class="text-zinc-700">
-                    (password_label) " "
-                    <code class="rounded bg-zinc-100 px-1.5 py-0.5 font-mono text-sm">(temporary_password)</code>
-                </p>
-                <p class="text-sm text-amber-700">(copy_hint)</p>
-            </div>
-            <div class="flex gap-4 text-sm">
-                <a href="/students/new" class="text-zinc-900 underline-offset-4 hover:underline">(create_another)</a>
-                <a href="/" class="text-zinc-600 hover:text-zinc-900">(home)</a>
-            </div>
-        </section>
-    })
+#[route(POST "/students")]
+async fn create_student_post_redirect() -> Result<SeeOther> {
+    Ok(see_other("/users"))
 }

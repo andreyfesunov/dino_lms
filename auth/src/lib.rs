@@ -4,9 +4,11 @@ mod infrastructure;
 mod ports;
 
 pub use application::{
-    BootstrapAdminCommand, BootstrapAdminResult, CreateStudentCommand, CreateStudentResult,
-    LoginCommand, LoginResult,
+    BootstrapAdminCommand, BootstrapAdminResult, ChangePasswordCommand, CompleteOnboardingCommand,
+    CreateStudentCommand, CreateStudentResult, GeneratePasswordCommand, GeneratePasswordResult,
+    InviteUsersCommand, InviteUsersResult, InvitedUser, ListUsersCommand, LoginCommand,
+    LoginResult, UpdateOwnProfileCommand, UpdateUserCommand,
 };
-pub use domain::{NewUser, User};
+pub use domain::{NewUser, User, UserListFilter, UserProfileUpdate, UserStatus};
 pub use infrastructure::{AuthError, AuthService};
 pub use kernel::{Actor, Authorizer, AuthzError, Permission, Role, UserId};

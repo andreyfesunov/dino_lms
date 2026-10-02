@@ -5,6 +5,7 @@ use thiserror::Error;
 #[serde(rename_all = "snake_case")]
 pub enum Role {
     Admin,
+    Teacher,
     Student,
 }
 
@@ -12,6 +13,7 @@ impl Role {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::Admin => "admin",
+            Self::Teacher => "teacher",
             Self::Student => "student",
         }
     }
@@ -33,6 +35,7 @@ impl std::str::FromStr for Role {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "admin" => Ok(Self::Admin),
+            "teacher" => Ok(Self::Teacher),
             "student" => Ok(Self::Student),
             other => Err(UnknownRole(other.to_owned())),
         }

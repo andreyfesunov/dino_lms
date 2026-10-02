@@ -6,24 +6,22 @@ use topcoat::{
     view::{View, view},
 };
 
-use crate::i18n::{locale_code, t};
+use crate::{
+    components::app_sidebar,
+    i18n::{locale_code, t},
+    session::current_user,
+};
 
 #[layout("/")]
 async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
     let lang = locale_code(cx);
     let brand = t(cx, "brand-title");
-    let is_login = uri(cx).path() == "/login";
-    let nav_login = t(cx, "nav-login");
-    let nav_students = t(cx, "nav-students");
-    let nav_en = t(cx, "nav-lang-en");
-    let nav_ru = t(cx, "nav-lang-ru");
-    let en_active = lang == "en";
-    let ru_active = lang == "ru";
-    let body_class = if is_login {
-        "min-h-full bg-bg font-body text-text antialiased"
-    } else {
-        "min-h-full bg-zinc-50 font-body text-zinc-900 antialiased"
-    };
+    let path = uri(cx).path();
+    let is_login = path == "/login";
+    let is_onboarding = path == "/onboarding";
+    let bare = is_login || is_onboarding;
+    let signed_in = current_user(cx).await?.is_some();
+    let show_shell = signed_in && !bare;
 
     Ok(view! {
         <!DOCTYPE html>
@@ -42,56 +40,15 @@ async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
                 topcoat::runtime::script()
                 topcoat::dev::script()
             </head>
-            <body class=(body_class)>
-                if !is_login {
-                    <header class="border-b border-zinc-200 bg-white">
-                        <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
-                            <a href="/" class="text-lg font-semibold tracking-tight">
-                                (brand)
-                            </a>
-                            <nav class="flex items-center gap-4 text-sm text-zinc-600">
-                                <a href="/login" class="hover:text-zinc-900">(nav_login)</a>
-                                <a href="/students/new" class="hover:text-zinc-900">(nav_students)</a>
-                                <div class="flex items-center gap-1 border-l border-zinc-200 pl-4">
-                                    <form method="post" action="/locale">
-                                        <input type="hidden" name="lang" value="en" />
-                                        <button
-                                            type="submit"
-                                            class=(if en_active {
-                                                "font-semibold text-zinc-900"
-                                            } else {
-                                                "hover:text-zinc-900"
-                                            })
-                                        >
-                                            (nav_en)
-                                        </button>
-                                    </form>
-                                    <span class="text-zinc-300">"/"</span>
-                                    <form method="post" action="/locale">
-                                        <input type="hidden" name="lang" value="ru" />
-                                        <button
-                                            type="submit"
-                                            class=(if ru_active {
-                                                "font-semibold text-zinc-900"
-                                            } else {
-                                                "hover:text-zinc-900"
-                                            })
-                                        >
-                                            (nav_ru)
-                                        </button>
-                                    </form>
-                                </div>
-                            </nav>
-                        </div>
-                    </header>
-                }
-                <div class=(if is_login {
-                    "contents"
+            <body class="min-h-full bg-bg font-body text-text antialiased">
+                if show_shell {
+                    <div class="flex min-h-screen gap-4 p-4 pb-24 md:pb-4">
+                        app_sidebar()
+                        <main class="min-w-0 flex-1">(slot)</main>
+                    </div>
                 } else {
-                    "mx-auto max-w-3xl px-4 py-10"
-                })>
-                    (slot)
-                </div>
+                    <div class="contents">(slot)</div>
+                }
             </body>
         </html>
     })

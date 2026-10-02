@@ -22,3 +22,28 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
 }
+
+/* Profile menu: settings + logout slide up from the avatar */
+.profile-menu .profile-menu__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    grid-template-rows 200ms ease,
+    opacity 180ms ease,
+    transform 200ms ease;
+  pointer-events: none;
+}
+
+.profile-menu .profile-menu__inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.profile-menu--open .profile-menu__panel {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}

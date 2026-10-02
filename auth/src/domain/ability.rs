@@ -5,8 +5,8 @@ pub struct Ability;
 impl Ability {
     pub fn allows(role: Role, permission: Permission) -> bool {
         match (role, permission) {
-            (Role::Admin, Permission::CreateStudentAccount) => true,
-            (Role::Student, _) => false,
+            (Role::Admin, Permission::ManageUsers) => true,
+            (Role::Teacher | Role::Student, _) => false,
         }
     }
 

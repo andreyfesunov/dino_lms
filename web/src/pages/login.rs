@@ -25,6 +25,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
 
     let mut error: Option<String> = None;
     let mut signed_in = false;
+    let mut needs_onboarding = false;
 
     if attempts.get() > 0 {
         let auth: &AuthService = app_context(cx);
@@ -41,6 +42,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                     .await
                     .map_err(|error| auth_error(cx, error))?;
                 signed_in = true;
+                needs_onboarding = result.user.needs_onboarding();
             }
             Err(_) => {
                 error = Some(t(cx, "login-error-invalid"));
@@ -81,12 +83,16 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
         if signed_in {
             <div class="flex min-h-screen items-center justify-center bg-bg px-6">
                 <p class="text-center font-body text-text-secondary">(redirecting)</p>
-                <script>"location.replace('/')"</script>
+                if needs_onboarding {
+                    <script>"location.replace('/onboarding')"</script>
+                } else {
+                    <script>"location.replace('/')"</script>
+                }
             </div>
         } else {
-            <div class="flex min-h-screen flex-col bg-bg lg:flex-row">
-                // Desktop brand panel
-                <aside class="hidden w-[560px] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse lg:flex">
+            <div class="flex min-h-screen flex-col bg-bg xl:flex-row">
+                // Desktop brand panel (≥1280)
+                <aside class="hidden w-[560px] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse xl:flex">
                     <div class="flex items-center gap-3">
                         dino_logo(
                             size_class: "h-12 w-12 rounded-[14px]",
@@ -105,8 +111,8 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                     <p class="font-body text-xs text-text-muted">(brand_footer.clone())</p>
                 </aside>
 
-                // Tablet brand strip
-                <div class="hidden h-80 flex-col justify-end gap-4 bg-inverse px-10 pb-12 pt-10 text-text-inverse md:flex lg:hidden">
+                // Tablet brand strip (768–1279)
+                <div class="hidden h-80 flex-col justify-end gap-4 bg-inverse px-10 pb-12 pt-10 text-text-inverse md:flex xl:hidden">
                     <div class="flex items-center gap-3">
                         dino_logo(
                             size_class: "h-11 w-11 rounded-xl",
@@ -120,7 +126,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                 </div>
 
                 // Form panel
-                <section class="relative flex flex-1 flex-col items-center justify-center bg-surface px-6 py-8 md:px-16 md:py-12 lg:px-16">
+                <section class="relative flex flex-1 flex-col items-center justify-center bg-surface px-6 py-8 md:px-16 md:py-12">
                     <div class="absolute top-4 right-4 flex items-center gap-1 text-sm text-text-muted md:top-6 md:right-6">
                         <form method="post" action="/locale">
                             <input type="hidden" name="lang" value="en" />

@@ -4,7 +4,7 @@ use sqlx::Row;
 use uuid::Uuid;
 
 use crate::{
-    domain::{NewUser, PasswordHash, User},
+    domain::{NewUser, PasswordHash, User, UserListFilter, UserProfileUpdate, UserStatus},
     ports::UserRepository,
 };
 
@@ -24,14 +24,19 @@ impl UserRepository for SqlxUserRepository {
     async fn create(&self, user: NewUser) -> Result<User, String> {
         sqlx::query(
             r#"
-            INSERT INTO users (id, login, password_hash, role, created_at)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO users (
+                id, login, password_hash, role, status, first_name, last_name, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             "#,
         )
         .bind(user.id.to_string())
         .bind(&user.login)
-        .bind(user.password_hash.as_str())
+        .bind(user.password_hash.as_ref().map(PasswordHash::as_str))
         .bind(user.role.as_str())
+        .bind(user.status.as_str())
+        .bind(&user.first_name)
+        .bind(&user.last_name)
         .bind(user.created_at)
         .execute(&self.pool)
         .await
@@ -42,6 +47,9 @@ impl UserRepository for SqlxUserRepository {
             login: user.login,
             password_hash: user.password_hash,
             role: user.role,
+            status: user.status,
+            first_name: user.first_name,
+            last_name: user.last_name,
             created_at: user.created_at,
         })
     }
@@ -49,7 +57,7 @@ impl UserRepository for SqlxUserRepository {
     async fn find_by_login(&self, login: &str) -> Result<Option<User>, String> {
         let row = sqlx::query(
             r#"
-            SELECT id, login, password_hash, role, created_at
+            SELECT id, login, password_hash, role, status, first_name, last_name, created_at
             FROM users
             WHERE login = ? COLLATE NOCASE
             "#,
@@ -65,7 +73,7 @@ impl UserRepository for SqlxUserRepository {
     async fn find_by_id(&self, id: UserId) -> Result<Option<User>, String> {
         let row = sqlx::query(
             r#"
-            SELECT id, login, password_hash, role, created_at
+            SELECT id, login, password_hash, role, status, first_name, last_name, created_at
             FROM users
             WHERE id = ?
             "#,
@@ -86,6 +94,129 @@ impl UserRepository for SqlxUserRepository {
             .map_err(|error| error.to_string())?;
         Ok(count)
     }
+
+    async fn list(&self, filter: &UserListFilter) -> Result<Vec<User>, String> {
+        let mut sql = String::from(
+            r#"
+            SELECT id, login, password_hash, role, status, first_name, last_name, created_at
+            FROM users
+            WHERE 1 = 1
+            "#,
+        );
+        let mut binds: Vec<String> = Vec::new();
+
+        if let Some(status) = filter.status {
+            sql.push_str(" AND status = ?");
+            binds.push(status.as_str().to_owned());
+        }
+
+        if let Some(query) = filter
+            .query
+            .as_ref()
+            .map(|q| q.trim())
+            .filter(|q| !q.is_empty())
+        {
+            sql.push_str(
+                " AND (
+                    login LIKE ? COLLATE NOCASE
+                    OR IFNULL(first_name, '') LIKE ? COLLATE NOCASE
+                    OR IFNULL(last_name, '') LIKE ? COLLATE NOCASE
+                    OR (IFNULL(last_name, '') || ' ' || IFNULL(first_name, '')) LIKE ? COLLATE NOCASE
+                )",
+            );
+            let pattern = format!("%{query}%");
+            binds.push(pattern.clone());
+            binds.push(pattern.clone());
+            binds.push(pattern.clone());
+            binds.push(pattern);
+        }
+
+        sql.push_str(" ORDER BY created_at DESC, login ASC");
+
+        let mut query = sqlx::query(&sql);
+        for value in &binds {
+            query = query.bind(value);
+        }
+
+        let rows = query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|error| error.to_string())?;
+
+        rows.into_iter().map(map_user).collect()
+    }
+
+    async fn update_profile(&self, id: UserId, update: UserProfileUpdate) -> Result<User, String> {
+        let current = self
+            .find_by_id(id)
+            .await?
+            .ok_or_else(|| "user not found".to_owned())?;
+
+        let first_name = update.first_name.or(current.first_name.clone());
+        let last_name = update.last_name.or(current.last_name.clone());
+        let role = update.role.unwrap_or(current.role);
+        let status = update.status.unwrap_or(current.status);
+
+        sqlx::query(
+            r#"
+            UPDATE users
+            SET first_name = ?, last_name = ?, role = ?, status = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(&first_name)
+        .bind(&last_name)
+        .bind(role.as_str())
+        .bind(status.as_str())
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+
+        self.find_by_id(id)
+            .await?
+            .ok_or_else(|| "user not found after update".to_owned())
+    }
+
+    async fn set_password(&self, id: UserId, password_hash: PasswordHash) -> Result<(), String> {
+        let result = sqlx::query("UPDATE users SET password_hash = ? WHERE id = ?")
+            .bind(password_hash.as_str())
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(|error| error.to_string())?;
+
+        if result.rows_affected() == 0 {
+            return Err("user not found".into());
+        }
+        Ok(())
+    }
+
+    async fn complete_onboarding(
+        &self,
+        id: UserId,
+        first_name: String,
+        last_name: String,
+    ) -> Result<User, String> {
+        sqlx::query(
+            r#"
+            UPDATE users
+            SET first_name = ?, last_name = ?, status = ?
+            WHERE id = ?
+            "#,
+        )
+        .bind(&first_name)
+        .bind(&last_name)
+        .bind(UserStatus::Active.as_str())
+        .bind(id.to_string())
+        .execute(&self.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+
+        self.find_by_id(id)
+            .await?
+            .ok_or_else(|| "user not found after onboarding".to_owned())
+    }
 }
 
 fn map_user(row: sqlx::sqlite::SqliteRow) -> Result<User, String> {
@@ -95,12 +226,22 @@ fn map_user(row: sqlx::sqlite::SqliteRow) -> Result<User, String> {
         .get::<String, _>("role")
         .parse::<Role>()
         .map_err(|error| error.to_string())?;
+    let status = row
+        .get::<String, _>("status")
+        .parse::<UserStatus>()
+        .map_err(|error| error.to_string())?;
+    let password_hash = row
+        .get::<Option<String>, _>("password_hash")
+        .map(PasswordHash::new);
 
     Ok(User {
         id: UserId::from_uuid(id),
         login: row.get("login"),
-        password_hash: PasswordHash::new(row.get::<String, _>("password_hash")),
+        password_hash,
         role,
+        status,
+        first_name: row.get("first_name"),
+        last_name: row.get("last_name"),
         created_at: row.get("created_at"),
     })
 }
