@@ -41,6 +41,9 @@ async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
                 <link rel="stylesheet" href=(tailwind::stylesheet!()) />
                 topcoat::runtime::script()
                 topcoat::dev::script()
+                <script>
+                    "document.addEventListener('click', function (e) { var b = e.target.closest('[data-copy]'); if (!b || !navigator.clipboard) return; navigator.clipboard.writeText(b.getAttribute('data-copy')); });"
+                </script>
             </head>
             <body class="min-h-full bg-bg font-body text-text antialiased">
                 if show_shell {

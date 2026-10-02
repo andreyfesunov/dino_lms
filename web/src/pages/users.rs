@@ -515,15 +515,12 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                         <p class="mt-1 font-body text-sm text-text-secondary">(pwd_sub)</p>
                         <div class="mt-4 flex items-center justify-between gap-3 rounded-md bg-inverse px-4 py-3">
                             <code class="font-mono text-sm text-text-inverse">$(new_password.get())</code>
-                            <button type="button" class="text-text-inverse" aria-label=(copy_label)
-                                @click=$(move |e: Event| {
-                                    e.prevent_default();
-                                })
+                            <button type="button" title=(copy_label.clone()) aria-label=(copy_label)
+                                class="rounded-md p-1.5 text-text-inverse transition-colors hover:bg-white/10"
                                 :data-copy=$(new_password.get())>
                                 components::copy(extra: "h-4 w-4 text-text-inverse")
                             </button>
                         </div>
-                        <script>"document.querySelectorAll('[data-copy]').forEach(function(b){b.onclick=function(){var t=b.getAttribute('data-copy');if(t&&navigator.clipboard)navigator.clipboard.writeText(t);};});"</script>
                         <div class="mt-5 flex justify-end">
                             <button type="button" class="rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
                                 @click=$(move |e: Event| {
