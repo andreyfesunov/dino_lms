@@ -222,12 +222,18 @@ impl AuthService {
                 continue;
             }
 
+            let temporary_password = generate_password();
+            let password_hash = self
+                .hasher
+                .hash(&temporary_password)
+                .map_err(AuthError::Message)?;
+
             let user = self
                 .users
                 .create(NewUser {
                     id: UserId::new(),
                     login: login.clone(),
-                    password_hash: None,
+                    password_hash: Some(password_hash),
                     role: Role::Student,
                     status: UserStatus::Pending,
                     first_name: None,
@@ -240,6 +246,7 @@ impl AuthService {
             created.push(InvitedUser {
                 user_id: user.id,
                 login: user.login,
+                temporary_password,
             });
         }
 

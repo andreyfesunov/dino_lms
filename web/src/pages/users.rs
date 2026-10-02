@@ -2,6 +2,7 @@ use auth::{
     AuthService, GeneratePasswordCommand, InviteUsersCommand, ListUsersCommand, Permission, Role,
     UpdateUserCommand, UserId, UserStatus,
 };
+use serde::Deserialize;
 use topcoat::{
     Result,
     context::{Cx, app_context},
@@ -101,6 +102,12 @@ async fn edit_user_button(
     })
 }
 
+#[derive(serde::Serialize, Deserialize)]
+struct InvitedAccount {
+    login: String,
+    password: String,
+}
+
 #[procedure]
 async fn invite_users_action(cx: &Cx, emails_text: String) -> Result<String> {
     let (actor, _) = require_permission(cx, Permission::ManageUsers).await?;
@@ -115,19 +122,18 @@ async fn invite_users_action(cx: &Cx, emails_text: String) -> Result<String> {
         .invite_users(&actor, InviteUsersCommand { emails })
         .await
         .map_err(|error| auth_error(cx, error))?;
-    Ok(format!(
-        "{} · {}",
-        t_args(
-            cx,
-            "users-invite-created",
-            [("count", (result.created.len() as i64).into())]
-        ),
-        t_args(
-            cx,
-            "users-invite-skipped",
-            [("count", (result.skipped.len() as i64).into())]
-        )
-    ))
+    let accounts: Vec<InvitedAccount> = result
+        .created
+        .into_iter()
+        .map(|user| InvitedAccount {
+            login: user.login,
+            password: user.temporary_password,
+        })
+        .collect();
+    if accounts.is_empty() {
+        return Ok(String::new());
+    }
+    Ok(serde_json::to_string(&accounts).unwrap_or_default())
 }
 
 #[procedure]
@@ -183,16 +189,16 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     let search = signal(cx, String::new);
     // 0 all, 1 active, 2 pending
     let filter = signal(cx, || 0u8);
-    // 0 none, 1 invite, 2 edit, 3 password
+    // 0 none, 1 invite, 2 edit, 3 password, 4 accounts created
     let modal = signal(cx, || 0u8);
     let invite_emails = signal(cx, String::new);
+    let created_accounts = signal(cx, String::new);
     let edit_id = signal(cx, String::new);
     let edit_name = signal(cx, String::new);
     let edit_email = signal(cx, String::new);
     let edit_role = signal(cx, || "student".to_owned());
     let edit_status = signal(cx, || "pending".to_owned());
     let new_password = signal(cx, String::new);
-    let flash = signal(cx, String::new);
     let version = signal(cx, || 0u32);
 
     let _ = version.get();
@@ -252,6 +258,12 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     let pwd_sub = t(cx, "users-new-password-sub");
     let done = t(cx, "action-done");
     let copy_label = t(cx, "action-copy");
+    let created_title = t(cx, "users-created-title");
+    let created_sub = t(cx, "users-created-sub");
+    let created_hint = t(cx, "users-created-hint");
+    let created_badge = t(cx, "users-created-badge");
+    let created_password_label = t(cx, "users-created-password-label");
+    let copy_all_label = t(cx, "action-copy-all");
     let role_admin = t(cx, "role-admin");
     let role_teacher = t(cx, "role-teacher");
     let role_student = t(cx, "role-student");
@@ -271,6 +283,13 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     );
     let current_filter = filter.get();
     let current_modal = modal.get();
+    let created: Vec<InvitedAccount> =
+        serde_json::from_str(&created_accounts.get()).unwrap_or_default();
+    let copy_all = created
+        .iter()
+        .map(|account| format!("{} — {}", account.login, account.password))
+        .collect::<Vec<_>>()
+        .join("\n");
 
     Ok(view! {
         <section class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8">
@@ -311,10 +330,6 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                         @click=$(move |e: Event| { e.prevent_default(); filter.set(2u8); })>(filter_pending)</button>
                 </div>
             </div>
-
-            if !flash.get().is_empty() {
-                <p class="font-body text-sm text-text-secondary">$(flash.get())</p>
-            }
 
             <div class="hidden overflow-hidden rounded-lg border border-border md:block">
                 <table class="w-full text-left">
@@ -415,10 +430,10 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                             <button type="button" class="rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
                                 @click=$(async move |e: Event| {
                                     e.prevent_default();
-                                    let msg = invite_users_action(invite_emails.get()).await;
+                                    let json = invite_users_action(invite_emails.get()).await;
                                     invite_emails.set("".to_owned());
-                                    modal.set(0u8);
-                                    flash.set(msg);
+                                    created_accounts.set(json.clone());
+                                    modal.set(if json.is_empty() { 0u8 } else { 4u8 });
                                     version.increment();
                                 })>(invite_submit)</button>
                         </div>
@@ -515,7 +530,7 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                         <p class="mt-1 font-body text-sm text-text-secondary">(pwd_sub)</p>
                         <div class="mt-4 flex items-center justify-between gap-3 rounded-md bg-inverse px-4 py-3">
                             <code class="font-mono text-sm text-text-inverse">$(new_password.get())</code>
-                            <button type="button" title=(copy_label.clone()) aria-label=(copy_label)
+                            <button type="button" title=(copy_label.clone()) aria-label=(copy_label.clone())
                                 class="rounded-md p-1.5 text-text-inverse transition-colors hover:bg-white/10"
                                 :data-copy=$(new_password.get())>
                                 components::copy(extra: "h-4 w-4 text-text-inverse")
@@ -526,6 +541,59 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                                 @click=$(move |e: Event| {
                                     e.prevent_default();
                                     new_password.set("".to_owned());
+                                    modal.set(0u8);
+                                })>(done.clone())</button>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            if current_modal == 4 {
+                <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A28]/40 p-4">
+                    <div class="flex max-h-[90vh] w-full max-w-xl flex-col gap-5 overflow-y-auto rounded-xl bg-surface p-7 shadow-xl">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex flex-col gap-1">
+                                <h2 class="font-heading text-[22px] leading-tight font-semibold text-text">(created_title)</h2>
+                                <p class="font-body text-[13px] text-text-secondary">(created_sub)</p>
+                            </div>
+                            <button type="button" class="rounded-md p-1 text-text-secondary hover:bg-input"
+                                @click=$(move |e: Event| { e.prevent_default(); modal.set(0u8); })>
+                                components::x(extra: "h-5 w-5")
+                            </button>
+                        </div>
+                        for account in created {
+                            <div class="flex flex-col gap-3 rounded-md bg-input p-4">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="font-body text-sm font-semibold text-text">(account.login)</span>
+                                    <span class="inline-flex rounded-sm bg-primary-soft px-2.5 py-1 font-body text-[11px] font-semibold text-text">(created_badge.clone())</span>
+                                </div>
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="flex items-center gap-2">
+                                        <span class="font-body text-[13px] text-text-muted">(created_password_label.clone())</span>
+                                        <code class="font-mono text-sm font-medium text-text">(account.password.clone())</code>
+                                    </span>
+                                    <button type="button"
+                                        class="inline-flex items-center gap-1.5 rounded-sm border border-border px-2.5 py-1.5 font-body text-xs font-medium text-text-secondary hover:bg-border/40"
+                                        :data-copy=(account.password.clone())>
+                                        components::copy(extra: "h-3.5 w-3.5")
+                                        <span>(copy_label.clone())</span>
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        <p class="font-body text-xs text-text-muted">(created_hint)</p>
+                        <div class="flex items-center justify-between gap-3">
+                            <button type="button"
+                                class="inline-flex items-center gap-2 rounded-md border border-border px-4 py-3 font-body text-sm font-medium text-text-secondary hover:bg-input"
+                                :data-copy=(copy_all)>
+                                components::copy(extra: "h-4 w-4")
+                                <span>(copy_all_label)</span>
+                            </button>
+                            <button type="button"
+                                class="rounded-md bg-primary px-6 py-3 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
+                                @click=$(move |e: Event| {
+                                    e.prevent_default();
+                                    created_accounts.set("".to_owned());
                                     modal.set(0u8);
                                 })>(done)</button>
                         </div>

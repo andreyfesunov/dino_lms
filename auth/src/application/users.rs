@@ -18,6 +18,7 @@ pub struct InviteUsersResult {
 pub struct InvitedUser {
     pub user_id: UserId,
     pub login: String,
+    pub temporary_password: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -3457,6 +3457,7 @@ dependencies = [
  "fluent-templates",
  "kernel",
  "serde",
+ "serde_json",
  "tokio",
  "topcoat",
 ]
