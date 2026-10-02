@@ -28,8 +28,13 @@ home-create-student = Создать студента
 home-manage-users = Пользователи
 home-open-settings = Настройки
 home-log-out = Выйти
-home-sign-in-prompt = Войдите, чтобы управлять LMS.
 home-log-in = Войти
+
+welcome-tagline = Учитесь. Растите. Как динозавр.
+welcome-desc = Платформа для карточек, уроков и групп — простое пространство, где знания растут вместе с вами.
+welcome-cta = Войти в аккаунт
+welcome-status = Система готова к работе
+welcome-footer-hint = Есть аккаунт — войдите, чтобы продолжить
 
 login-title = Вход в систему
 login-subtitle = Введите данные аккаунта Dino LMS

@@ -23,6 +23,52 @@
   --radius-xl: 24px;
 }
 
+/* Welcome: photo + inverse overlay, left-aligned hero */
+.welcome__overlay {
+  background: linear-gradient(
+    180deg,
+    #1b3a28e6 0%,
+    #1b3a28b3 45%,
+    #1b3a2866 100%
+  );
+}
+
+@keyframes welcome-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.welcome__brand {
+  animation: welcome-rise 480ms ease both;
+}
+
+.welcome__hero {
+  animation: welcome-rise 560ms 90ms ease both;
+}
+
+.welcome__cta {
+  animation: welcome-rise 520ms 160ms ease both;
+}
+
+.welcome__footer {
+  animation: welcome-rise 480ms 220ms ease both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome__brand,
+  .welcome__hero,
+  .welcome__cta,
+  .welcome__footer {
+    animation: none;
+  }
+}
+
 /* Profile menu: settings + logout slide up from the avatar */
 .profile-menu .profile-menu__panel {
   display: grid;
