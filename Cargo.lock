@@ -201,6 +201,7 @@ dependencies = [
  "serde",
  "sqlx",
  "thiserror",
+ "tokio",
  "uuid",
 ]
 

@@ -18,10 +18,11 @@ async fn root_layout(cx: &Cx, slot: Slot<'_>) -> Result<impl View> {
     let brand = t(cx, "brand-title");
     let path = uri(cx).path();
     let is_login = path == "/login";
+    let is_setup = path == "/setup";
     let is_onboarding = path == "/onboarding";
     let signed_in = current_user(cx).await?.is_some();
     let is_welcome = path == "/" && !signed_in;
-    let bare = is_login || is_onboarding || is_welcome;
+    let bare = is_login || is_setup || is_onboarding || is_welcome;
     let show_shell = signed_in && !bare;
 
     Ok(view! {

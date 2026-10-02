@@ -54,6 +54,32 @@ impl UserRepository for SqlxUserRepository {
         })
     }
 
+    async fn create_first_admin(&self, user: NewUser) -> Result<Option<User>, String> {
+        let row = sqlx::query(
+            r#"
+            INSERT INTO users (
+                id, login, password_hash, role, status, first_name, last_name, created_at
+            )
+            SELECT ?, ?, ?, ?, ?, ?, ?, ?
+            WHERE NOT EXISTS (SELECT 1 FROM users WHERE role = 'admin')
+            RETURNING id, login, password_hash, role, status, first_name, last_name, created_at
+            "#,
+        )
+        .bind(user.id.to_string())
+        .bind(&user.login)
+        .bind(user.password_hash.as_ref().map(PasswordHash::as_str))
+        .bind(user.role.as_str())
+        .bind(user.status.as_str())
+        .bind(&user.first_name)
+        .bind(&user.last_name)
+        .bind(user.created_at)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|error| error.to_string())?;
+
+        row.map(map_user).transpose()
+    }
+
     async fn find_by_login(&self, login: &str) -> Result<Option<User>, String> {
         let row = sqlx::query(
             r#"

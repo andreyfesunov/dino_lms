@@ -29,6 +29,13 @@ async fn home(cx: &Cx) -> Result<impl View> {
         let actor = kernel::Actor::new(u.id, [u.role]);
         auth.permits(&actor, Permission::ManageUsers)
     });
+    let has_admin = if signed_in {
+        true
+    } else {
+        auth.has_admin()
+            .await
+            .map_err(|error| topcoat::Error::msg(error.to_string()))?
+    };
 
     let welcome = t(cx, "home-welcome");
     let display = user.as_ref().map(|u| u.display_name()).unwrap_or_default();
@@ -41,9 +48,22 @@ async fn home(cx: &Cx) -> Result<impl View> {
     let brand_footer = t(cx, "brand-footer");
     let welcome_tagline = t(cx, "welcome-tagline");
     let welcome_desc = t(cx, "welcome-desc");
-    let welcome_cta = t(cx, "welcome-cta");
-    let welcome_status = t(cx, "welcome-status");
-    let welcome_footer_hint = t(cx, "welcome-footer-hint");
+    let welcome_cta = if has_admin {
+        t(cx, "welcome-cta")
+    } else {
+        t(cx, "welcome-cta-setup")
+    };
+    let welcome_status = if has_admin {
+        t(cx, "welcome-status")
+    } else {
+        t(cx, "welcome-status-setup")
+    };
+    let welcome_footer_hint = if has_admin {
+        t(cx, "welcome-footer-hint")
+    } else {
+        t(cx, "welcome-footer-hint-setup")
+    };
+    let welcome_href = if has_admin { "/login" } else { "/setup" };
     let nav_en = t(cx, "nav-lang-en");
     let nav_ru = t(cx, "nav-lang-ru");
     let lang = locale_code(cx);
@@ -150,7 +170,7 @@ async fn home(cx: &Cx) -> Result<impl View> {
                             (welcome_desc)
                         </p>
                         <a
-                            href="/login"
+                            href=(welcome_href)
                             class="welcome__cta mt-2 inline-flex h-[52px] items-center justify-center gap-2 rounded-md bg-surface px-7 font-body text-base font-semibold text-primary hover:bg-surface/95 focus:outline-none focus:ring-2 focus:ring-primary-soft/50 md:w-auto w-full"
                         >
                             (welcome_cta)

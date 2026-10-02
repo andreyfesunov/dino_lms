@@ -4,6 +4,8 @@ use serde::Deserialize;
 pub struct BootstrapAdminCommand {
     pub login: String,
     pub password: Option<String>,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
 }
 
 #[derive(Debug, Clone)]

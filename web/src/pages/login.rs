@@ -3,7 +3,7 @@ use topcoat::{
     Result,
     context::{Cx, app_context},
     router::{
-        error::{SeeOther, see_other},
+        error::{RouterErrorExt, SeeOther, see_other},
         page, route,
     },
     runtime::{Event, shard, signal},
@@ -263,7 +263,16 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
 }
 
 #[page("/login")]
-async fn login_page() -> Result<impl View> {
+async fn login_page(cx: &Cx) -> Result<impl View> {
+    let auth: &AuthService = app_context(cx);
+    if !auth
+        .has_admin()
+        .await
+        .map_err(|error| auth_error(cx, error))?
+    {
+        None::<()>.ok_or_redirect("/setup")?;
+    }
+
     Ok(view! {
         login_panel()
     })

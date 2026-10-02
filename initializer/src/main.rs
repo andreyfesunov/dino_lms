@@ -18,6 +18,10 @@ enum Commands {
         login: String,
         #[arg(long)]
         password: Option<String>,
+        #[arg(long)]
+        first_name: Option<String>,
+        #[arg(long)]
+        last_name: Option<String>,
     },
 }
 
@@ -27,8 +31,13 @@ async fn main() {
 
     match cli.command {
         Commands::Migrate => migrate().await,
-        Commands::BootstrapAdmin { login, password } => {
-            bootstrap_admin(login, password).await;
+        Commands::BootstrapAdmin {
+            login,
+            password,
+            first_name,
+            last_name,
+        } => {
+            bootstrap_admin(login, password, first_name, last_name).await;
         }
     }
 }
@@ -42,11 +51,21 @@ async fn migrate() {
     println!("migrations applied successfully");
 }
 
-async fn bootstrap_admin(login: String, password: Option<String>) {
+async fn bootstrap_admin(
+    login: String,
+    password: Option<String>,
+    first_name: Option<String>,
+    last_name: Option<String>,
+) {
     let pool = connect_pool().await;
     let auth = AuthService::new(pool);
     let result = auth
-        .bootstrap_admin(BootstrapAdminCommand { login, password })
+        .bootstrap_admin(BootstrapAdminCommand {
+            login,
+            password,
+            first_name,
+            last_name,
+        })
         .await
         .unwrap_or_else(|error| {
             eprintln!("bootstrap-admin failed: {error}");

@@ -20,6 +20,8 @@ use crate::{
 pub enum AuthError {
     #[error(transparent)]
     Authz(#[from] AuthzError),
+    #[error("an administrator already exists")]
+    AdminExists,
     #[error("invalid login or password")]
     InvalidCredentials,
     #[error("session user missing")]
@@ -50,45 +52,73 @@ impl AuthService {
         &self.authorizer
     }
 
-    pub async fn bootstrap_admin(
-        &self,
-        command: BootstrapAdminCommand,
-    ) -> Result<BootstrapAdminResult, AuthError> {
+    pub async fn has_admin(&self) -> Result<bool, AuthError> {
         let admins = self
             .users
             .count_by_role(Role::Admin)
             .await
             .map_err(AuthError::Message)?;
-        if admins > 0 {
-            return Err(AuthError::Message(
-                "admin already exists; bootstrap refused".into(),
-            ));
+        Ok(admins > 0)
+    }
+
+    pub async fn bootstrap_admin(
+        &self,
+        command: BootstrapAdminCommand,
+    ) -> Result<BootstrapAdminResult, AuthError> {
+        if self.has_admin().await? {
+            return Err(AuthError::AdminExists);
         }
 
         let (temporary_password, password) = match command.password {
-            Some(password) if !password.is_empty() => (None, password),
+            Some(password) if !password.is_empty() => {
+                if password.chars().count() < 8 {
+                    return Err(AuthError::Message(
+                        "password must be at least 8 characters".into(),
+                    ));
+                }
+                (None, password)
+            }
             _ => {
                 let generated = generate_password();
                 (Some(generated.clone()), generated)
             }
         };
 
+        let clean = |value: &Option<String>| {
+            value
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned)
+        };
+        let first_name = clean(&command.first_name);
+        let last_name = clean(&command.last_name);
+
+        // A fully named admin is onboarded right away; a nameless one
+        // (e.g. created via CLI) completes `/onboarding` on first sign-in.
+        let status = if first_name.is_some() && last_name.is_some() {
+            UserStatus::Active
+        } else {
+            UserStatus::Pending
+        };
+
         let password_hash = self.hasher.hash(&password).map_err(AuthError::Message)?;
         let now = unix_now();
         let user = self
             .users
-            .create(NewUser {
+            .create_first_admin(NewUser {
                 id: UserId::new(),
                 login: command.login.clone(),
                 password_hash: Some(password_hash),
                 role: Role::Admin,
-                status: UserStatus::Pending,
-                first_name: None,
-                last_name: None,
+                status,
+                first_name,
+                last_name,
                 created_at: now,
             })
             .await
-            .map_err(AuthError::Message)?;
+            .map_err(AuthError::Message)?
+            .ok_or(AuthError::AdminExists)?;
 
         Ok(BootstrapAdminResult {
             user_id: user.id,

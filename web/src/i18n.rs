@@ -77,6 +77,7 @@ pub fn t_args<'a>(
 
 pub fn auth_error(cx: &Cx, error: AuthError) -> topcoat::Error {
     let key = match &error {
+        AuthError::AdminExists => "error-admin-exists",
         AuthError::InvalidCredentials => "error-invalid-credentials",
         AuthError::SessionUserMissing => "error-session-user-missing",
         AuthError::Authz(AuthzError::Unauthenticated) => "error-unauthenticated",
