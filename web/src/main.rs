@@ -29,5 +29,6 @@ async fn main() {
 
 mod i18n;
 mod layout;
+mod logo;
 mod pages;
 mod session;

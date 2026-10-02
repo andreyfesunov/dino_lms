@@ -1,4 +1,11 @@
 brand-title = dino_lms
+brand-name = Dino LMS
+brand-headline =
+    Учитесь.
+    Растите.
+    Как динозавр.
+brand-desc = Платформа для карточек, уроков и групп — просто и по делу.
+brand-footer = © 2026 Dino LMS
 
 nav-login = Вход
 nav-students = Студенты
@@ -12,12 +19,16 @@ home-log-out = Выйти
 home-sign-in-prompt = Войдите, чтобы управлять LMS.
 home-log-in = Войти
 
-login-title = Вход
-login-label = Логин
+login-title = Вход в систему
+login-subtitle = Введите данные аккаунта Dino LMS
+login-label = Email
+login-placeholder = name@school.ru
 login-password = Пароль
 login-submit = Войти
 login-redirecting = Вход выполнен. Перенаправление…
 login-error-invalid = Неверный логин или пароль
+login-show-password = Показать пароль
+login-hide-password = Скрыть пароль
 
 student-create-title = Создать студента
 student-create-hint = Пароль будет сгенерирован сервером.
