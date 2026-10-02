@@ -15,6 +15,7 @@ clap = { version = "4", features = ["derive"] }
 config = { path = "config" }
 db = { path = "db" }
 figment = { version = "0.10", features = ["env", "toml"] }
+fluent-templates = "0.15"
 hex = "0.4"
 kernel = { path = "kernel" }
 rand = "0.9"

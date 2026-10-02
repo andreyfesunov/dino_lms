@@ -27,6 +27,7 @@ async fn main() {
     topcoat::start(router).await.unwrap();
 }
 
+mod i18n;
 mod layout;
 mod pages;
 mod session;

@@ -11,6 +11,8 @@ use topcoat::{
     view::{View, view},
 };
 
+use crate::i18n::{auth_error, t};
+
 #[shard]
 async fn login_panel(cx: &Cx) -> Result<impl View> {
     let login = signal(cx, String::new);
@@ -33,22 +35,28 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                 let session = session::start(cx).await?;
                 auth.persist_session(result.user.id, &*session.token_hash, session.expires_at)
                     .await
-                    .map_err(|error| topcoat::Error::msg(error.to_string()))?;
+                    .map_err(|error| auth_error(cx, error))?;
                 signed_in = true;
             }
             Err(_) => {
-                error = Some("Invalid login or password".to_owned());
+                error = Some(t(cx, "login-error-invalid"));
             }
         }
     }
 
+    let redirecting = t(cx, "login-redirecting");
+    let title = t(cx, "login-title");
+    let login_label = t(cx, "login-label");
+    let password_label = t(cx, "login-password");
+    let submit = t(cx, "login-submit");
+
     Ok(view! {
         <section class="mx-auto max-w-md space-y-6">
             if signed_in {
-                <p class="text-center text-zinc-700">"Signed in. Redirecting…"</p>
+                <p class="text-center text-zinc-700">(redirecting)</p>
                 <script>"location.replace('/')"</script>
             } else {
-                <h1 class="text-3xl font-semibold tracking-tight">"Login"</h1>
+                <h1 class="text-3xl font-semibold tracking-tight">(title)</h1>
                 if let Some(message) = error.as_ref() {
                     <p class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
                         (message)
@@ -62,7 +70,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                     })
                 >
                     <label class="block space-y-2 text-sm font-medium text-zinc-700">
-                        "Login"
+                        (login_label)
                         <input
                             name="login"
                             required=""
@@ -73,7 +81,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                         />
                     </label>
                     <label class="block space-y-2 text-sm font-medium text-zinc-700">
-                        "Password"
+                        (password_label)
                         <input
                             name="password"
                             type="password"
@@ -88,7 +96,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                         type="submit"
                         class="inline-flex w-full justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
                     >
-                        "Sign in"
+                        (submit)
                     </button>
                 </form>
             }
@@ -109,7 +117,7 @@ async fn logout(cx: &Cx) -> Result<SeeOther> {
         let auth: &AuthService = app_context(cx);
         auth.delete_session(&*hash)
             .await
-            .map_err(|error| topcoat::Error::msg(error.to_string()))?;
+            .map_err(|error| auth_error(cx, error))?;
     }
     Ok(see_other("/login"))
 }

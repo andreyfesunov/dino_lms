@@ -12,6 +12,7 @@ path = "src/main.rs"
 auth.workspace = true
 config.workspace = true
 db.workspace = true
+fluent-templates.workspace = true
 kernel.workspace = true
 serde.workspace = true
 tokio.workspace = true

@@ -17,6 +17,10 @@ use crate::{
 pub enum AuthError {
     #[error(transparent)]
     Authz(#[from] AuthzError),
+    #[error("invalid login or password")]
+    InvalidCredentials,
+    #[error("session user missing")]
+    SessionUserMissing,
     #[error("{0}")]
     Message(String),
 }
@@ -93,14 +97,14 @@ impl AuthService {
             .find_by_login(&command.login)
             .await
             .map_err(AuthError::Message)?
-            .ok_or_else(|| AuthError::Message("invalid login or password".into()))?;
+            .ok_or(AuthError::InvalidCredentials)?;
 
         let valid = self
             .hasher
             .verify(&command.password, &user.password_hash)
             .map_err(AuthError::Message)?;
         if !valid {
-            return Err(AuthError::Message("invalid login or password".into()));
+            return Err(AuthError::InvalidCredentials);
         }
 
         Ok(LoginResult { user })
@@ -188,7 +192,7 @@ impl AuthService {
             .find_by_id(session.user_id)
             .await
             .map_err(AuthError::Message)?
-            .ok_or_else(|| AuthError::Message("session user missing".into()))?;
+            .ok_or(AuthError::SessionUserMissing)?;
 
         Ok(Some(actor_from_user(&user)))
     }
