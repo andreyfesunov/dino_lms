@@ -2,7 +2,7 @@ use auth::{AuthService, CompleteOnboardingCommand};
 use topcoat::{
     Result,
     context::{Cx, app_context},
-    router::page,
+    router::{error::see_other, page},
     runtime::{Event, procedure, shard, signal},
     view::{View, view},
 };
@@ -45,17 +45,14 @@ async fn onboarding_panel(cx: &Cx) -> Result<impl View> {
     let first_label = t(cx, "field-first-name");
     let last_label = t(cx, "field-last-name");
     let submit = t(cx, "onboarding-continue");
-    let redirecting = t(cx, "login-redirecting");
     let email = user.login.clone();
 
+    if done.get() {
+        return Err(see_other("/").into());
+    }
+
     Ok(view! {
-        if done.get() {
-            <div class="flex min-h-screen items-center justify-center bg-bg px-6">
-                <p class="text-center font-body text-text-secondary">(redirecting)</p>
-                <script>"location.replace('/')"</script>
-            </div>
-        } else {
-            <div class="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
+        <div class="flex min-h-screen items-center justify-center bg-bg px-4 py-10">
                 <section class="w-full max-w-[440px] rounded-xl bg-surface p-8 shadow-[0_4px_24px_rgba(27,58,40,0.08)]">
                     <div class="mb-6 flex items-center gap-3">
                         dino_logo(size_class: "h-10 w-10 rounded-[12px]", variant: LogoVariant::OnSurface)
@@ -115,7 +112,6 @@ async fn onboarding_panel(cx: &Cx) -> Result<impl View> {
                     </form>
                 </section>
             </div>
-        }
     })
 }
 

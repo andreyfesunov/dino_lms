@@ -62,7 +62,6 @@ setup-error-mismatch = Пароли не совпадают
 setup-error-short = Пароль должен быть не короче 8 символов
 setup-error-failed = Не удалось создать администратора
 setup-error-exists = Администратор уже существует — попробуйте войти
-setup-redirecting = Администратор создан. Перенаправление…
 
 login-title = Вход в систему
 login-subtitle = Введите данные аккаунта Dino LMS
@@ -70,7 +69,6 @@ login-label = Email
 login-placeholder = name@school.ru
 login-password = Пароль
 login-submit = Войти
-login-redirecting = Вход выполнен. Перенаправление…
 login-error-invalid = Неверный логин или пароль
 login-show-password = Показать пароль
 login-hide-password = Скрыть пароль

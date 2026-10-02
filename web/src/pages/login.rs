@@ -24,8 +24,6 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
     let password_visible = signal(cx, || false);
 
     let mut error: Option<String> = None;
-    let mut signed_in = false;
-    let mut needs_onboarding = false;
 
     if attempts.get() > 0 {
         let auth: &AuthService = app_context(cx);
@@ -41,8 +39,12 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                 auth.persist_session(result.user.id, &*session.token_hash, session.expires_at)
                     .await
                     .map_err(|error| auth_error(cx, error))?;
-                signed_in = true;
-                needs_onboarding = result.user.needs_onboarding();
+                let target = if result.user.needs_onboarding() {
+                    "/onboarding"
+                } else {
+                    "/"
+                };
+                return Err(see_other(target).into());
             }
             Err(_) => {
                 error = Some(t(cx, "login-error-invalid"));
@@ -50,7 +52,6 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
         }
     }
 
-    let redirecting = t(cx, "login-redirecting");
     let title = t(cx, "login-title");
     let subtitle = t(cx, "login-subtitle");
     let login_label = t(cx, "login-label");
@@ -80,17 +81,7 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
     };
 
     Ok(view! {
-        if signed_in {
-            <div class="flex min-h-screen items-center justify-center bg-bg px-6">
-                <p class="text-center font-body text-text-secondary">(redirecting)</p>
-                if needs_onboarding {
-                    <script>"location.replace('/onboarding')"</script>
-                } else {
-                    <script>"location.replace('/')"</script>
-                }
-            </div>
-        } else {
-            <div class="flex min-h-screen flex-col bg-bg xl:flex-row">
+        <div class="flex min-h-screen flex-col bg-bg xl:flex-row">
                 // Desktop brand panel (≥1280)
                 <aside class="hidden w-[560px] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse xl:flex">
                     <div class="flex items-center gap-3">
@@ -258,7 +249,6 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
                     </div>
                 </section>
             </div>
-        }
     })
 }
 

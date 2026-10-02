@@ -62,7 +62,6 @@ setup-error-mismatch = Passwords do not match
 setup-error-short = Password must be at least 8 characters
 setup-error-failed = Could not create administrator
 setup-error-exists = Administrator already exists — try signing in
-setup-redirecting = Administrator created. Redirecting…
 
 login-title = Sign in
 login-subtitle = Enter your Dino LMS account details
@@ -70,7 +69,6 @@ login-label = Email
 login-placeholder = name@school.ru
 login-password = Password
 login-submit = Sign in
-login-redirecting = Signed in. Redirecting…
 login-error-invalid = Invalid login or password
 login-show-password = Show password
 login-hide-password = Hide password
