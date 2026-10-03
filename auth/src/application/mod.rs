@@ -9,7 +9,7 @@ pub use create_student::{CreateStudentCommand, CreateStudentResult};
 pub use get_actor::actor_from_user;
 pub use login::{LoginCommand, LoginResult};
 pub use users::{
-    ChangePasswordCommand, CompleteOnboardingCommand, GeneratePasswordCommand,
+    ChangePasswordCommand, CompleteOnboardingCommand, DeleteUserCommand, GeneratePasswordCommand,
     GeneratePasswordResult, InviteUsersCommand, InviteUsersResult, InvitedUser, ListUsersCommand,
     UpdateOwnProfileCommand, UpdateUserCommand,
 };

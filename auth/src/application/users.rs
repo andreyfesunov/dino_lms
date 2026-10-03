@@ -37,6 +37,11 @@ pub struct UpdateUserCommand {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct DeleteUserCommand {
+    pub user_id: UserId,
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct GeneratePasswordCommand {
     pub user_id: UserId,
 }

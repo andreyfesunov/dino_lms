@@ -6,7 +6,7 @@ use thiserror::Error;
 use crate::{
     application::{
         BootstrapAdminCommand, BootstrapAdminResult, ChangePasswordCommand,
-        CompleteOnboardingCommand, CreateStudentCommand, CreateStudentResult,
+        CompleteOnboardingCommand, CreateStudentCommand, CreateStudentResult, DeleteUserCommand,
         GeneratePasswordCommand, GeneratePasswordResult, InviteUsersCommand, InviteUsersResult,
         InvitedUser, ListUsersCommand, LoginCommand, LoginResult, UpdateOwnProfileCommand,
         UpdateUserCommand, actor_from_user,
@@ -26,6 +26,10 @@ pub enum AuthError {
     InvalidCredentials,
     #[error("session user missing")]
     SessionUserMissing,
+    #[error("cannot delete your own account")]
+    SelfDelete,
+    #[error("user not found")]
+    UserNotFound,
     #[error("{0}")]
     Message(String),
 }
@@ -347,6 +351,40 @@ impl AuthService {
             login: user.login,
             temporary_password,
         })
+    }
+
+    pub async fn delete_user(
+        &self,
+        actor: &Actor,
+        command: DeleteUserCommand,
+    ) -> Result<(), AuthError> {
+        self.authorizer
+            .authorize(actor, Permission::ManageUsers)
+            .await?;
+
+        if command.user_id == actor.user_id {
+            return Err(AuthError::SelfDelete);
+        }
+
+        let user = self
+            .users
+            .find_by_id(command.user_id)
+            .await
+            .map_err(AuthError::Message)?
+            .ok_or(AuthError::UserNotFound)?;
+
+        // Sessions cascade at the database level (`sessions.user_id ... ON
+        // DELETE CASCADE`), so a deleted user is signed out everywhere.
+        let deleted = self
+            .users
+            .delete(user.id)
+            .await
+            .map_err(AuthError::Message)?;
+        if !deleted {
+            return Err(AuthError::UserNotFound);
+        }
+
+        Ok(())
     }
 
     pub async fn complete_onboarding(

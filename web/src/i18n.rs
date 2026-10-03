@@ -63,6 +63,17 @@ pub fn t(cx: &Cx, key: &str) -> String {
     LOCALES.lookup(&locale(cx), key)
 }
 
+/// Raw message pattern with placeholders left intact (e.g. "Selected:
+/// { $count }") for client-side interpolation in `raw!` expressions.
+pub fn t_pattern(cx: &Cx, key: &str) -> String {
+    let map: std::collections::HashMap<std::borrow::Cow<'static, str>, FluentValue<'_>> =
+        [("count", FluentValue::from("[[COUNT]]"))]
+            .into_iter()
+            .map(|(k, v)| (std::borrow::Cow::Borrowed(k), v))
+            .collect();
+    LOCALES.lookup_with_args(&locale(cx), key, &map)
+}
+
 pub fn t_args<'a>(
     cx: &Cx,
     key: &str,
@@ -80,6 +91,8 @@ pub fn auth_error(cx: &Cx, error: AuthError) -> topcoat::Error {
         AuthError::AdminExists => "error-admin-exists",
         AuthError::InvalidCredentials => "error-invalid-credentials",
         AuthError::SessionUserMissing => "error-session-user-missing",
+        AuthError::SelfDelete => "error-self-delete",
+        AuthError::UserNotFound => "error-user-not-found",
         AuthError::Authz(AuthzError::Unauthenticated) => "error-unauthenticated",
         AuthError::Authz(AuthzError::Forbidden(_)) => "error-forbidden",
         AuthError::Message(_) => "error-generic",

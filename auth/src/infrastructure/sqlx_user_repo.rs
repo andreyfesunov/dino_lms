@@ -243,6 +243,15 @@ impl UserRepository for SqlxUserRepository {
             .await?
             .ok_or_else(|| "user not found after onboarding".to_owned())
     }
+
+    async fn delete(&self, id: UserId) -> Result<bool, String> {
+        let result = sqlx::query("DELETE FROM users WHERE id = ?")
+            .bind(id.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok(result.rows_affected() > 0)
+    }
 }
 
 fn map_user(row: sqlx::sqlite::SqliteRow) -> Result<User, String> {

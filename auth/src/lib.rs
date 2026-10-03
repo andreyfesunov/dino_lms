@@ -5,9 +5,9 @@ mod ports;
 
 pub use application::{
     BootstrapAdminCommand, BootstrapAdminResult, ChangePasswordCommand, CompleteOnboardingCommand,
-    CreateStudentCommand, CreateStudentResult, GeneratePasswordCommand, GeneratePasswordResult,
-    InviteUsersCommand, InviteUsersResult, InvitedUser, ListUsersCommand, LoginCommand,
-    LoginResult, UpdateOwnProfileCommand, UpdateUserCommand,
+    CreateStudentCommand, CreateStudentResult, DeleteUserCommand, GeneratePasswordCommand,
+    GeneratePasswordResult, InviteUsersCommand, InviteUsersResult, InvitedUser, ListUsersCommand,
+    LoginCommand, LoginResult, UpdateOwnProfileCommand, UpdateUserCommand,
 };
 pub use domain::{NewUser, User, UserListFilter, UserProfileUpdate, UserStatus};
 pub use infrastructure::{AuthError, AuthService};
