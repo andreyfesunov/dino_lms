@@ -63,7 +63,7 @@ async fn setup_panel(cx: &Cx) -> Result<impl View> {
                         let session = session::start(cx).await?;
                         auth.persist_session(
                             result.user.id,
-                            &*session.token_hash,
+                            &session.token_hash,
                             session.expires_at,
                         )
                         .await

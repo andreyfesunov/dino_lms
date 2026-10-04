@@ -15,15 +15,20 @@ use crate::{
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum NavId {
+    Courses,
     Users,
     Settings,
 }
 
 fn active_nav(path: &str) -> Option<NavId> {
-    match path {
-        "/users" => Some(NavId::Users),
-        "/settings" => Some(NavId::Settings),
-        _ => None,
+    if path == "/users" {
+        Some(NavId::Users)
+    } else if path == "/settings" {
+        Some(NavId::Settings)
+    } else if path == "/courses" || path.starts_with("/courses/") {
+        Some(NavId::Courses)
+    } else {
+        None
     }
 }
 
@@ -71,16 +76,14 @@ pub async fn app_sidebar(cx: &Cx) -> Result<impl View> {
     let show = maybe_user.is_some();
 
     let label_back = t(cx, "nav-back");
-    let label_create = t(cx, "nav-create");
-    let label_cards = t(cx, "nav-cards");
-    let label_lessons = t(cx, "nav-lessons");
-    let label_groups = t(cx, "nav-groups");
+    let label_courses = t(cx, "nav-courses");
     let label_users = t(cx, "nav-users");
     let label_settings = t(cx, "nav-settings");
     let label_logout = t(cx, "nav-logout");
     let label_people = t(cx, "nav-people");
     let label_more = t(cx, "nav-more");
 
+    let courses_active = active == Some(NavId::Courses);
     let users_active = active == Some(NavId::Users);
     let settings_active = active == Some(NavId::Settings);
     let open = menu_open.get();
@@ -125,36 +128,12 @@ pub async fn app_sidebar(cx: &Cx) -> Result<impl View> {
                 </button>
                 <div class="my-1 h-px bg-border" data-sidebar-back="" hidden=""></div>
 
-                <a href="#" class=(format!("{} lg:hidden", icon_only_class(false))) aria-disabled="true">
-                    components::plus(extra: icon_tone(false))
+                <a href="/courses" class=(format!("{} lg:hidden", icon_only_class(courses_active)))>
+                    components::graduation_cap(extra: icon_tone(courses_active))
                 </a>
-                <a href="#" class=(format!("{} hidden lg:flex", item_class(false))) aria-disabled="true">
-                    components::plus(extra: icon_tone(false))
-                    <span>(label_create.clone())</span>
-                </a>
-
-                <a href="#" class=(format!("{} lg:hidden", icon_only_class(false))) aria-disabled="true">
-                    components::layers(extra: icon_tone(false))
-                </a>
-                <a href="#" class=(format!("{} hidden lg:flex", item_class(false))) aria-disabled="true">
-                    components::layers(extra: icon_tone(false))
-                    <span>(label_cards.clone())</span>
-                </a>
-
-                <a href="#" class=(format!("{} lg:hidden", icon_only_class(false))) aria-disabled="true">
-                    components::folder(extra: icon_tone(false))
-                </a>
-                <a href="#" class=(format!("{} hidden lg:flex", item_class(false))) aria-disabled="true">
-                    components::folder(extra: icon_tone(false))
-                    <span>(label_lessons.clone())</span>
-                </a>
-
-                <a href="#" class=(format!("{} lg:hidden", icon_only_class(false))) aria-disabled="true">
-                    components::users(extra: icon_tone(false))
-                </a>
-                <a href="#" class=(format!("{} hidden lg:flex", item_class(false))) aria-disabled="true">
-                    components::users(extra: icon_tone(false))
-                    <span>(label_groups.clone())</span>
+                <a href="/courses" class=(format!("{} hidden lg:flex", item_class(courses_active)))>
+                    components::graduation_cap(extra: icon_tone(courses_active))
+                    <span>(label_courses.clone())</span>
                 </a>
 
                 if can_manage_users {
@@ -216,19 +195,16 @@ pub async fn app_sidebar(cx: &Cx) -> Result<impl View> {
         </aside>
 
         <nav class="fixed inset-x-0 bottom-0 z-40 flex items-end justify-between gap-1 border-t border-border bg-surface px-3 pb-3 pt-2 md:hidden">
-            <a href="#" class="flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-text-secondary" aria-disabled="true">
-                components::layers(extra: "h-5 w-5")
-                <span class="font-body text-[11px]">(label_cards.clone())</span>
-            </a>
-            <a href="#" class="flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-text-secondary" aria-disabled="true">
-                components::folder(extra: "h-5 w-5")
-                <span class="font-body text-[11px]">(label_lessons.clone())</span>
-            </a>
-            <a href="#" class="relative -mt-5 flex flex-1 flex-col items-center gap-1" aria-disabled="true">
-                <span class="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-inverse shadow-md">
-                    components::plus(extra: "h-5 w-5 text-text-inverse")
-                </span>
-                <span class="font-body text-[11px] text-text-secondary">(label_create.clone())</span>
+            <a
+                href="/courses"
+                class=(if courses_active {
+                    "flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-primary"
+                } else {
+                    "flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-text-secondary"
+                })
+            >
+                components::graduation_cap(extra: "h-5 w-5")
+                <span class="font-body text-[11px]">(label_courses.clone())</span>
             </a>
             if can_manage_users {
                 <a
@@ -241,11 +217,6 @@ pub async fn app_sidebar(cx: &Cx) -> Result<impl View> {
                 >
                     components::users(extra: "h-5 w-5")
                     <span class="font-body text-[11px]">(label_people.clone())</span>
-                </a>
-            } else {
-                <a href="#" class="flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-text-secondary" aria-disabled="true">
-                    components::users(extra: "h-5 w-5")
-                    <span class="font-body text-[11px]">(label_groups.clone())</span>
                 </a>
             }
             <a

@@ -36,13 +36,13 @@ async fn login_panel(cx: &Cx) -> Result<impl View> {
         {
             Ok(result) => {
                 let session = session::start(cx).await?;
-                auth.persist_session(result.user.id, &*session.token_hash, session.expires_at)
+                auth.persist_session(result.user.id, &session.token_hash, session.expires_at)
                     .await
                     .map_err(|error| auth_error(cx, error))?;
                 let target = if result.user.needs_onboarding() {
                     "/onboarding"
                 } else {
-                    "/"
+                    "/courses"
                 };
                 return Err(see_other(target).into());
             }
@@ -272,7 +272,7 @@ async fn login_page(cx: &Cx) -> Result<impl View> {
 async fn logout(cx: &Cx) -> Result<SeeOther> {
     if let Some(hash) = session::stop(cx).await? {
         let auth: &AuthService = app_context(cx);
-        auth.delete_session(&*hash)
+        auth.delete_session(&hash)
             .await
             .map_err(|error| auth_error(cx, error))?;
     }

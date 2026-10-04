@@ -87,13 +87,13 @@ async fn connect_pool() -> db::Pool {
         std::process::exit(1);
     });
 
-    if let Some(parent) = cfg.database.path.parent() {
-        if !parent.as_os_str().is_empty() {
-            std::fs::create_dir_all(parent).unwrap_or_else(|error| {
-                eprintln!("failed to create database directory: {error}");
-                std::process::exit(1);
-            });
-        }
+    if let Some(parent) = cfg.database.path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        std::fs::create_dir_all(parent).unwrap_or_else(|error| {
+            eprintln!("failed to create database directory: {error}");
+            std::process::exit(1);
+        });
     }
 
     db::connect(&cfg.database.url())

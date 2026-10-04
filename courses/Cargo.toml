@@ -1,0 +1,19 @@
+[package]
+edition.workspace = true
+license.workspace = true
+name = "courses"
+version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+comrak.workspace = true
+config.workspace = true
+db.workspace = true
+kernel.workspace = true
+serde.workspace = true
+sqlx.workspace = true
+thiserror.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

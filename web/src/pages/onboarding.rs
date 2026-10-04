@@ -48,7 +48,7 @@ async fn onboarding_panel(cx: &Cx) -> Result<impl View> {
     let email = user.login.clone();
 
     if done.get() {
-        return Err(see_other("/").into());
+        return Err(see_other("/courses").into());
     }
 
     Ok(view! {

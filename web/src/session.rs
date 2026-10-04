@@ -15,7 +15,7 @@ pub async fn current_actor(cx: &Cx) -> Result<Option<Actor>> {
     };
 
     let auth: &AuthService = app_context(cx);
-    auth.actor_from_token_hash(&*hash)
+    auth.actor_from_token_hash(&hash)
         .await
         .map_err(|error| auth_error(cx, error))
 }
@@ -67,7 +67,7 @@ pub async fn require_onboarded(cx: &Cx) -> Result<(Actor, User)> {
 pub async fn require_needs_onboarding(cx: &Cx) -> Result<(Actor, User)> {
     let (actor, user) = require_user(cx).await?;
     if !user.needs_onboarding() {
-        None::<()>.ok_or_redirect("/")?;
+        None::<()>.ok_or_redirect("/courses")?;
     }
     Ok((actor, user))
 }

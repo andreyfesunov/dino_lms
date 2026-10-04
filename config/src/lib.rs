@@ -9,11 +9,27 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub database: DatabaseConfig,
+    pub courses: CoursesConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DatabaseConfig {
     pub path: PathBuf,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoursesConfig {
+    /// Directory holding declarative course bundles
+    /// (`{course-id}/config.toml`, chapters, lessons, media).
+    pub dir: PathBuf,
+}
+
+impl Default for CoursesConfig {
+    fn default() -> Self {
+        Self {
+            dir: PathBuf::from("courses"),
+        }
+    }
 }
 
 impl Default for Config {
@@ -22,6 +38,7 @@ impl Default for Config {
             database: DatabaseConfig {
                 path: PathBuf::from("data/dino.sqlite"),
             },
+            courses: CoursesConfig::default(),
         }
     }
 }
@@ -55,5 +72,11 @@ mod tests {
     fn default_sqlite_url() {
         let cfg = Config::default();
         assert_eq!(cfg.database.url(), "sqlite:data/dino.sqlite?mode=rwc");
+    }
+
+    #[test]
+    fn default_courses_dir() {
+        let cfg = Config::default();
+        assert_eq!(cfg.courses.dir, PathBuf::from("courses"));
     }
 }

@@ -2,6 +2,7 @@ use auth::{
     AuthService, DeleteUserCommand, GeneratePasswordCommand, InviteUsersCommand, ListUsersCommand,
     Permission, Role, UpdateUserCommand, UserId, UserStatus,
 };
+use courses::CourseService;
 use serde::{Deserialize, Serialize};
 use topcoat::{
     Result,
@@ -17,6 +18,8 @@ use crate::{
     session::require_permission,
 };
 
+use super::course_detail::chapter_access_modal;
+
 fn role_label(cx: &Cx, role: Role) -> String {
     match role {
         Role::Admin => t(cx, "role-admin"),
@@ -31,6 +34,9 @@ fn status_label(cx: &Cx, status: UserStatus) -> String {
         UserStatus::Pending => t(cx, "status-pending"),
     }
 }
+
+/// Path-friendly empty string for closures inside view!.
+const ACCESS_CANCEL: &str = "";
 
 fn status_badge_class(status: UserStatus) -> &'static str {
     match status {
@@ -133,11 +139,14 @@ async fn user_row_actions(
     delete_ids: Signal<String>,
     modal: Signal<u8>,
     row_menu: Signal<String>,
+    access_student: Signal<String>,
+    access_label: String,
 ) -> Result<impl View> {
     let open = row_menu.get() == user_id;
     let toggle_user_id = user_id.clone();
     let edit_user_id = user_id.clone();
     let delete_user_id = user_id.clone();
+    let access_user_id = user_id.clone();
     Ok(view! {
         <div class="relative inline-flex">
             <button
@@ -199,6 +208,19 @@ async fn user_row_actions(
                     <span>(edit_label)</span>
                 </button>
                 if !is_self {
+                    <button
+                        type="button"
+                        class="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-left font-body text-sm text-text hover:bg-input"
+                        @click=$(move |e: Event| {
+                            e.prevent_default();
+                            row_menu.set("".to_owned());
+                            access_student.set(access_user_id.clone());
+                            modal.set(6u8);
+                        })
+                    >
+                        components::graduation_cap(extra: "h-4 w-4")
+                        <span>(access_label)</span>
+                    </button>
                     <div class="my-1 h-px bg-border"></div>
                     <button
                         type="button"
@@ -344,7 +366,8 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     let search = signal(cx, String::new);
     // 0 all, 1 active, 2 pending
     let filter = signal(cx, || 0u8);
-    // 0 none, 1 invite, 2 edit, 3 password, 4 accounts created, 5 delete confirm
+    // 0 none, 1 invite, 2 edit, 3 password, 4 accounts created, 5 delete confirm,
+    // 6 course/chapter access
     let modal = signal(cx, || 0u8);
     let invite_emails = signal(cx, String::new);
     let created_accounts = signal(cx, String::new);
@@ -363,6 +386,12 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     let row_menu = signal(cx, String::new);
     // Comma-separated ids awaiting delete confirmation (single or bulk).
     let delete_ids = signal(cx, String::new);
+    // Course/chapter access modal state (admin): selected student id and the
+    // course whose chapter list is being edited.
+    let access_student = signal(cx, String::new);
+    let access_course = signal(cx, String::new);
+    let access_version = signal(cx, || 0u32);
+    let access_open = signal(cx, || true);
 
     let _ = version.get();
 
@@ -412,6 +441,79 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     let selected_count = selected_now.len() as i64;
 
     let current_modal = modal.get();
+
+    // Course/chapter access modal (admin, modal == 6): resolve the selected
+    // user, course list and the chapter grant being edited. Falls back to the
+    // first listed user when none chosen yet. Flattened into plain variables
+    // because view! cannot capture arbitrary structs in event closures.
+    let access_students: Vec<UserId> = users
+        .iter()
+        .filter(|user| user.id != actor.user_id)
+        .map(|user| user.id)
+        .collect();
+    let access_user_rows: Vec<(String, String)> = users
+        .iter()
+        .filter(|user| user.id != actor.user_id)
+        .map(|user| (user.id.to_string(), user.display_name()))
+        .collect();
+    let access_selected_user = {
+        let wanted = access_student.get();
+        let fallback = access_user_rows
+            .first()
+            .map(|(id, _)| id.clone())
+            .unwrap_or_default();
+        if wanted.is_empty() || !access_user_rows.iter().any(|(id, _)| id == &wanted) {
+            fallback
+        } else {
+            wanted
+        }
+    };
+    let courses_service: &CourseService = app_context(cx);
+    let open_courses: Vec<courses::CourseConfig> = courses_service
+        .catalog()
+        .list()
+        .into_iter()
+        .filter(|course| !course.chapters.is_empty())
+        .collect();
+    let wanted_course = access_course.get();
+    let access_selected_course = if wanted_course.is_empty()
+        || !open_courses.iter().any(|course| course.id == wanted_course)
+    {
+        open_courses
+            .first()
+            .map(|course| course.id.clone())
+            .unwrap_or_default()
+    } else {
+        wanted_course
+    };
+    let (access_course_id, access_course_title, access_chapters, access_current_open) =
+        match open_courses.iter().find(|c| c.id == access_selected_course) {
+            Some(course) if access_selected_user.parse::<UserId>().is_ok() => {
+                let user_id = access_selected_user.parse::<UserId>().expect("checked");
+                let open = courses_service
+                    .student_chapters(&actor, user_id, &course.id)
+                    .await
+                    .unwrap_or_default();
+                (
+                    course.id.clone(),
+                    course.title.clone(),
+                    course.chapters.clone(),
+                    open,
+                )
+            }
+            _ => (
+                access_selected_course.clone(),
+                String::new(),
+                Vec::new(),
+                Vec::new(),
+            ),
+        };
+    let access_user_label = t(cx, "users-access-user-label");
+    let access_course_label = t(cx, "access-course-label");
+    let access_course_placeholder = t(cx, "users-access-course-placeholder");
+    let access_close_label = t(cx, "access-close");
+    let access_students_options = access_user_rows.clone();
+
     let current_delete_ids: Vec<String> = delete_ids
         .get()
         .split(',')
@@ -466,6 +568,7 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
     let actions_label = t(cx, "users-row-actions");
     let edit_action_label = t(cx, "users-action-edit");
     let delete_action_label = t(cx, "users-action-delete");
+    let access_courses_label = t(cx, "users-action-courses");
     // Raw pattern (placeholders intact) for the live counter in raw!; the
     // expr fallback below renders it server-side with the current count.
     let selected_count_pattern = t_pattern(cx, "users-selected-count");
@@ -652,6 +755,8 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                                         delete_ids: delete_ids.clone(),
                                         modal: modal.clone(),
                                         row_menu: row_menu.clone(),
+                                        access_student: access_student.clone(),
+                                        access_label: access_courses_label.clone(),
                                     )
                                 </td>
                             </tr>
@@ -695,6 +800,8 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                                 delete_ids: delete_ids.clone(),
                                 modal: modal.clone(),
                                 row_menu: row_menu.clone(),
+                                access_student: access_student.clone(),
+                                access_label: access_courses_label.clone(),
                             )
                         </div>
                         <div class="mt-3 flex flex-wrap gap-2">
@@ -1014,6 +1121,58 @@ async fn users_panel(cx: &Cx) -> Result<impl View> {
                         </div>
                     </div>
                 </div>
+            }
+            if current_modal == 6 {
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-start">
+                    <div class="flex flex-col gap-1.5">
+                        <span class="font-body text-[13px] font-medium text-text-secondary">
+                            (access_user_label)
+                        </span>
+                        <select
+                            :value=$(access_selected_user)
+                            @change=$(|e: Event| access_student.set(e.target.value))
+                            class="h-11 min-w-[240px] rounded-md border-0 bg-input px-3 font-body text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        >
+                            for (user_id, user_name) in access_students_options {
+                                <option value=(user_id)>(user_name)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <span class="font-body text-[13px] font-medium text-text-secondary">
+                            (access_course_label)
+                        </span>
+                        <select
+                            :value=$(access_selected_course)
+                            @change=$(|e: Event| access_course.set(e.target.value))
+                            class="h-11 min-w-[240px] rounded-md border-0 bg-input px-3 font-body text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        >
+                            <option value="">(access_course_placeholder)</option>
+                        </select>
+                    </div>
+                    <button
+                        type="button"
+                        class="h-11 rounded-md bg-input px-4 font-body text-sm font-medium text-text hover:bg-border"
+                        @click=$(move |e: Event| {
+                            e.prevent_default();
+                            access_student.set(ACCESS_CANCEL.to_owned());
+                            access_course.set(ACCESS_CANCEL.to_owned());
+                            modal.set(0u8);
+                        })
+                    >
+                        (access_close_label)
+                    </button>
+                </div>
+                chapter_access_modal(
+                    course_id: access_course_id,
+                    course_title: access_course_title,
+                    chapters: access_chapters,
+                    initial_open: access_current_open,
+                    students: access_students,
+                    student: access_student.clone(),
+                    open: access_open.clone(),
+                    version: access_version.clone(),
+                )
             }
         </section>
     })

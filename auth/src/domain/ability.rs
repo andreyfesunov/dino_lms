@@ -6,6 +6,7 @@ impl Ability {
     pub fn allows(role: Role, permission: Permission) -> bool {
         match (role, permission) {
             (Role::Admin, Permission::ManageUsers) => true,
+            (Role::Admin, Permission::ManageCourses) => true,
             (Role::Teacher | Role::Student, _) => false,
         }
     }

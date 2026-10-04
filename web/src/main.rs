@@ -13,7 +13,10 @@ async fn main() {
     let pool = db::connect(&cfg.database.url())
         .await
         .expect("failed to connect to database");
-    let auth = AuthService::new(pool);
+    let auth = AuthService::new(pool.clone());
+    let course_repo = std::sync::Arc::new(courses::SqlxCourseRepository::new(pool));
+    let course_catalog = courses::Catalog::open(&cfg.courses.dir);
+    let courses = courses::CourseService::new(course_catalog, course_repo);
 
     let router = Router::builder()
         .discover()
@@ -21,6 +24,7 @@ async fn main() {
         .sessions(SessionConfig::default())
         .assets(AssetBundle::load().expect("failed to load asset bundle"))
         .app_context(auth)
+        .app_context(courses)
         .runtime()
         .build();
 

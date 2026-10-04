@@ -1,5 +1,10 @@
+mod course_context;
+mod course_detail;
+mod course_media;
+mod courses;
 mod create_student;
 mod home;
+mod lesson;
 mod login;
 mod onboarding;
 mod settings;

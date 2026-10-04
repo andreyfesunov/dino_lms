@@ -1,0 +1,34 @@
+id = "python-basics"
+title = "Основы Python"
+description = "Стартовый курс для новых студентов: синтаксис, структуры данных и первая практика. Каждый урок — короткая статья с видео и ссылками."
+estimated_hours = "6"
+
+[[chapters]]
+id = "getting-started"
+title = "Знакомство с Python"
+open_by_default = true
+
+[[chapters.lessons]]
+id = "what-is-python"
+title = "Что такое Python"
+duration_min = 10
+
+[[chapters.lessons]]
+id = "install"
+title = "Установка и первый запуск"
+duration_min = 15
+
+[[chapters]]
+id = "data-types"
+title = "Типы данных"
+open_by_default = false
+
+[[chapters.lessons]]
+id = "numbers-and-strings"
+title = "Числа и строки"
+duration_min = 20
+
+[[chapters.lessons]]
+id = "collections"
+title = "Списки, словари и множества"
+duration_min = 25
