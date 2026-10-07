@@ -27,11 +27,12 @@ describe('StartupService', () => {
     const pending = startup.initialize();
     expect(startup.initialize()).toBe(pending);
     expect(session.ready()).toBe(false);
-    resolve({ has_admin: true, user: null });
+    resolve({ has_admin: true, user: null, software_version: '1.2.3' });
     await pending;
     expect(bootstrap).toHaveBeenCalledTimes(1);
     expect(session.ready()).toBe(true);
     expect(session.hasAdmin()).toBe(true);
+    expect(session.softwareVersion()).toBe('1.2.3');
     expect(session.signedIn()).toBe(false);
   });
 

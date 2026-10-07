@@ -212,6 +212,7 @@ access-close = Close
 access-no-chapters = The course has no chapters
 
 settings-title = Profile settings
+settings-software-version = Dino LMS server version
 settings-subtitle = Email is set by an admin and cannot be changed. You can update your password.
 settings-password-section = Password
 settings-current-password = Current password

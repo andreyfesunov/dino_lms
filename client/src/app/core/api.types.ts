@@ -12,6 +12,7 @@ export interface UserResponse {
 }
 
 export interface BootstrapResponse {
+  software_version: string;
   has_admin: boolean;
   user: UserResponse | null;
 }

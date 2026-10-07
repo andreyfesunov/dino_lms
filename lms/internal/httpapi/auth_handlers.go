@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/andreyfesunov/dino_lms/lms/internal/auth"
+	"github.com/andreyfesunov/dino_lms/lms/internal/buildinfo"
 	"github.com/andreyfesunov/dino_lms/lms/internal/kernel"
 )
 
@@ -25,8 +26,9 @@ func base64Token(token []byte) string { return base64RawURL(token) }
 // bootstrapResponse feeds the client router: whether setup is needed and who
 // is signed in.
 type bootstrapResponse struct {
-	HasAdmin bool          `json:"has_admin"`
-	User     *userResponse `json:"user"`
+	SoftwareVersion string        `json:"software_version"`
+	HasAdmin        bool          `json:"has_admin"`
+	User            *userResponse `json:"user"`
 }
 
 type userResponse struct {
@@ -68,7 +70,7 @@ func (s *Server) handleBootstrap(w http.ResponseWriter, r *http.Request) {
 		writeError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, bootstrapResponse{HasAdmin: hasAdmin, User: toUserResponse(user)})
+	writeJSON(w, http.StatusOK, bootstrapResponse{HasAdmin: hasAdmin, User: toUserResponse(user), SoftwareVersion: buildinfo.Current()})
 }
 
 type credentialsRequest struct {

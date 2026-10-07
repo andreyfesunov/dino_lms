@@ -5,6 +5,7 @@ import { UserResponse } from './api.types';
 export class SessionStore {
   readonly user = signal<UserResponse | null>(null);
   readonly hasAdmin = signal(false);
+  readonly softwareVersion = signal('');
   readonly ready = signal(false);
 
   readonly signedIn = computed(() => this.user() !== null);

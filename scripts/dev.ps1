@@ -32,7 +32,9 @@ function Initialize-Tools {
 }
 
 function Build-Api {
-    Invoke-Checked go.exe @('-C', 'lms', 'build', '-o', '../.run/web.exe', './cmd/web')
+    $appVersion = (Get-Content -LiteralPath (Join-Path $PSScriptRoot '../VERSION') -Raw).Trim()
+    if ($appVersion -notmatch '^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$') { throw 'VERSION must contain a software version, for example 0.1.0.' }
+    Invoke-Checked go.exe @('-C', 'lms', 'build', '-ldflags', "-X github.com/andreyfesunov/dino_lms/lms/internal/buildinfo.Version=$appVersion", '-o', '../.run/web.exe', './cmd/web')
 }
 
 try {

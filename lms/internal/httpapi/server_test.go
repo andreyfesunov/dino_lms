@@ -86,6 +86,10 @@ func (f *fixture) admin() *http.Cookie {
 func TestBootstrapSessionAndOnboarding(t *testing.T) {
 	f := newFixture(t)
 	w := f.request("GET", "/api/bootstrap", "", nil, 200)
+	var bootstrap bootstrapResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &bootstrap); err != nil || bootstrap.SoftwareVersion == "" {
+		t.Fatalf("missing server version: %s", w.Body.String())
+	}
 	if !strings.Contains(w.Body.String(), `"has_admin":false`) {
 		t.Fatal(w.Body.String())
 	}

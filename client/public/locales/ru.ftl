@@ -212,6 +212,7 @@ access-close = Закрыть
 access-no-chapters = В курсе нет глав
 
 settings-title = Настройки профиля
+settings-software-version = Версия сервера Dino LMS
 settings-subtitle = Email задаётся админом и не меняется. Пароль можно обновить.
 settings-password-section = Пароль
 settings-current-password = Текущий пароль

@@ -1,8 +1,12 @@
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'node:path';
-import { cpSync, mkdirSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync } from 'node:fs';
 
 const root = resolve(__dirname, '..');
+const appVersion = readFileSync(resolve(root, 'VERSION'), 'utf8').trim();
+if (!/^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)*$/.test(appVersion)) {
+  throw new Error('VERSION must contain a software version, for example 0.1.0.');
+}
 const testCourses = resolve(root, '.run', 'e2e-courses');
 mkdirSync(testCourses, { recursive: true });
 cpSync(resolve(root, 'courses'), testCourses, { recursive: true });
@@ -23,7 +27,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'go -C lms build -o ../.run/web-e2e.exe ./cmd/web && .run\\web-e2e.exe',
+      command: `go -C lms build -ldflags="-X github.com/andreyfesunov/dino_lms/lms/internal/buildinfo.Version=${appVersion}" -o ../.run/web-e2e.exe ./cmd/web && .run\\web-e2e.exe`,
       cwd: root,
       url: 'http://127.0.0.1:8081/api/bootstrap',
       env: {

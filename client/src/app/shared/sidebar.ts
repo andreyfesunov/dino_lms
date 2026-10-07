@@ -120,15 +120,18 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           <button
             type="button"
             (click)="toggleMenu()"
-            class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-input lg:justify-start"
+            class="flex min-w-0 w-full items-center justify-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-input lg:justify-start"
+            [title]="session.user()?.display_name ?? ''"
           >
             <span
               class="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-text-inverse"
             >
               <app-icon name="user" extra="h-3.5 w-3.5" />
             </span>
-            <span class="hidden truncate font-body text-sm font-medium text-text lg:inline">
-              {{ session.user()?.short_name }}
+            <span
+              class="hidden min-w-0 flex-1 whitespace-normal break-words font-body text-sm font-medium leading-snug text-text lg:block"
+            >
+              {{ session.user()?.display_name }}
             </span>
           </button>
         </div>

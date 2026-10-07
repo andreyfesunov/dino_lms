@@ -71,7 +71,7 @@ func (u User) ShortName() string {
 	first, last := trimmed(u.FirstName), trimmed(u.LastName)
 	switch {
 	case first != "" && last != "":
-		return fmt.Sprintf("%s %c.", last, first[0])
+		return fmt.Sprintf("%s %c.", last, []rune(first)[0])
 	case first != "":
 		return first
 	case last != "":

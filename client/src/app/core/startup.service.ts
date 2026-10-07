@@ -17,6 +17,7 @@ export class StartupService {
   private async load(): Promise<void> {
     const [, bootstrap] = await Promise.all([this.i18n.init(), this.api.bootstrap()]);
     this.session.setHasAdmin(bootstrap.has_admin);
+    this.session.softwareVersion.set(bootstrap.software_version ?? '');
     this.session.setUser(bootstrap.user);
   }
 }

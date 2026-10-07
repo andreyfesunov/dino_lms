@@ -182,6 +182,12 @@ import { Icon } from '../../shared/icon';
           }
         </ul>
       </section>
+      <footer class="mt-auto border-t border-border pt-4 font-body text-xs text-text-muted">
+        {{ t('settings-software-version') }}:
+        <span class="break-all font-mono" data-testid="software-version">{{
+          session.softwareVersion() || '—'
+        }}</span>
+      </footer>
     </section>
   `,
 })

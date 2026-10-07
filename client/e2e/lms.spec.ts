@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 test('fresh welcome, setup, users, grants, student onboarding and progress', async ({
   page,
@@ -120,6 +122,11 @@ test('settings translations, floating user actions and named access controls', a
 
   await page.goto('/settings');
   const language = page.locator('select[name="language"]');
+  const bootstrap = await (await page.request.get('/api/bootstrap')).json();
+  expect(bootstrap.software_version).toBe(
+    readFileSync(resolve(__dirname, '../../VERSION'), 'utf8').trim(),
+  );
+  await expect(page.getByTestId('software-version')).toHaveText(bootstrap.software_version);
   await language.selectOption('ru');
   await expect(page.locator('[name="currentPassword"]')).toHaveAttribute(
     'placeholder',
@@ -208,6 +215,28 @@ test('settings translations, floating user actions and named access controls', a
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     }
   }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const longNameResponse = await page.request.put('/api/me/profile', {
+    data: { first_name: 'Александр', last_name: 'ОченьДлиннаяФамилияПреподавателя' },
+  });
+  expect(longNameResponse.ok()).toBeTruthy();
+  expect((await longNameResponse.json()).user.short_name).toBe(
+    'ОченьДлиннаяФамилияПреподавателя А.',
+  );
+  await page.reload();
+  const profile = page.locator('aside button[title]');
+  await expect(profile).toHaveText('ОченьДлиннаяФамилияПреподавателя Александр');
+  const name = profile.locator('span').last();
+  await expect(name).toHaveCSS('white-space', 'normal');
+  expect(await name.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  expect(
+    (
+      await page.request.put('/api/me/profile', {
+        data: { first_name: 'Admin', last_name: 'User' },
+      })
+    ).ok(),
+  ).toBeTruthy();
+  await page.reload();
   const languageBounds = (await page.locator('select[name="language"]').boundingBox())!;
   const passwordBounds = (await page.locator('[name="currentPassword"]').boundingBox())!;
   expect(languageBounds.y + languageBounds.height).toBeLessThan(passwordBounds.y);
