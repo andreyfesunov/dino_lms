@@ -1,0 +1,60 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - govet
+    - staticcheck
+    - errcheck
+    - gocritic
+    - revive
+  settings:
+    depguard:
+      rules:
+        kernel-stdlib-only:
+          name: kernel-stdlib-only
+          files:
+            - "**/lms/internal/kernel/**"
+          deny:
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal"
+              desc: kernel must not import other internal packages
+        db-isolated:
+          name: db-isolated
+          files:
+            - "**/lms/internal/db/**"
+          deny:
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal"
+              desc: db must not import domain packages
+        config-isolated:
+          name: config-isolated
+          files:
+            - "**/lms/internal/config/**"
+          deny:
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal"
+              desc: config must not import domain packages
+        auth-layers:
+          name: auth-layers
+          files:
+            - "**/lms/internal/auth/**"
+          deny:
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal/courses"
+              desc: auth must not depend on courses
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal/config"
+              desc: auth must not depend on config
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal/httpapi"
+              desc: auth must not depend on httpapi
+        courses-layers:
+          name: courses-layers
+          files:
+            - "**/lms/internal/courses/**"
+          deny:
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal/auth"
+              desc: courses must not depend on auth
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal/config"
+              desc: courses must not depend on config
+            - pkg: "github.com/andreyfesunov/dino_lms/lms/internal/httpapi"
+              desc: courses must not depend on httpapi

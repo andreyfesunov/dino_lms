@@ -4,3 +4,11 @@
 *.sqlite-*
 /dino.toml
 /docs/spec/
+node_modules/
+/client/dist/
+/lms/bin/
+/.run/
+/web-err.log
+/web-out.log
+/client/test-results/
+/client/playwright-report/

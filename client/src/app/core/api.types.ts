@@ -1,0 +1,89 @@
+// API types mirroring the Go httpapi JSON contracts.
+
+export interface UserResponse {
+  id: string;
+  login: string;
+  role: 'admin' | 'teacher' | 'student';
+  status: 'pending' | 'active';
+  first_name: string | null;
+  last_name: string | null;
+  display_name: string;
+  short_name: string;
+}
+
+export interface BootstrapResponse {
+  has_admin: boolean;
+  user: UserResponse | null;
+}
+
+export interface CourseListItem {
+  id: string;
+  title: string;
+  description: string;
+  archived: boolean;
+  estimated_hours: string | null;
+  total_lessons: number;
+  progress: number;
+  students: number;
+}
+
+export interface LessonEntry {
+  chapter_id: string;
+  id: string;
+  title: string;
+  duration_min: number | null;
+  done: boolean;
+}
+
+export interface ChapterEntry {
+  id: string;
+  title: string;
+  open_by_default: boolean;
+  state: 'open' | 'locked';
+  progress: number;
+  lessons: LessonEntry[];
+}
+
+export interface CourseDetail {
+  course: CourseListItem;
+  chapters: ChapterEntry[];
+}
+
+export interface LessonNav {
+  course_id: string;
+  chapter_id: string;
+  lesson_id: string;
+  title: string;
+}
+
+export interface LessonResponse {
+  course: { id: string; title: string };
+  chapter: { id: string; title: string };
+  id: string;
+  title: string;
+  durationMin: number | null;
+  html: string;
+  videos: { url: string; file: string }[];
+  youtube: {
+    url: string;
+    title: string;
+    channel: string;
+    thumbnail: string | null;
+  }[];
+  done: boolean;
+  index: number;
+  total: number;
+  prev: LessonNav | null;
+  next: LessonNav | null;
+}
+
+export interface InvitedAccount {
+  id: string;
+  login: string;
+  temporary_password: string;
+}
+
+export interface InviteResponse {
+  created: InvitedAccount[];
+  skipped: string[];
+}

@@ -1,28 +1,27 @@
 repos:
   - repo: local
     hooks:
-      - id: cargo-autoinherit
-        name: cargo-autoinherit
-        entry: cargo autoinherit
+      - id: go-fmt
+        name: go-fmt
+        entry: gofmt -w -s
         language: system
-        types: [rust]
-        stages: [pre-commit]
-        pass_filenames: false
+        types: [go]
+        files: ^lms/
 
-      - id: cargo-sort
-        name: cargo-sort
-        entry: cargo sort -w
+      - id: goimports
+        name: goimports
+        entry: goimports -w
         language: system
-        types: [rust]
-        stages: [pre-commit]
-        pass_filenames: false
+        types: [go]
+        files: ^lms/
+        require_serial: true
 
-      - id: cargo-fmt
-        name: cargo-fmt
-        entry: cargo fmt --all
+      - id: go-vet
+        name: go-vet
+        entry: go -C lms vet ./...
         language: system
-        types: [rust]
-        stages: [pre-commit]
+        types: [go]
+        files: ^lms/
         pass_filenames: false
 
   - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
