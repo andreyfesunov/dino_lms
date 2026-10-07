@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AccountSession } from '../../core/api.types';
 import { ApiService, ApiError } from '../../core/api.service';
 import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
@@ -115,6 +117,71 @@ import { Icon } from '../../shared/icon';
           {{ t('settings-save') }}
         </button>
       </form>
+      <section
+        class="flex max-w-2xl flex-col gap-4 border-t border-border pt-6"
+        aria-labelledby="sessions-title"
+      >
+        <h2 id="sessions-title" class="font-heading text-xl font-semibold text-text">
+          {{ t('sessions-title') }}
+        </h2>
+        <p class="text-sm text-text-secondary">{{ t('sessions-subtitle') }}</p>
+        <div class="flex flex-wrap gap-3">
+          <button
+            type="button"
+            (click)="loadSessions()"
+            [disabled]="sessionsBusy()"
+            class="rounded-md border border-border px-4 py-2 text-sm text-text disabled:opacity-50"
+          >
+            {{ t('sessions-refresh') }}
+          </button>
+          <button
+            type="button"
+            (click)="revokeOthers()"
+            [disabled]="sessionsBusy() || !hasOtherSessions()"
+            class="rounded-md border border-danger/30 px-4 py-2 text-sm text-danger disabled:opacity-50"
+          >
+            {{ t('sessions-revoke-others') }}
+          </button>
+        </div>
+        @if (sessionsError()) {
+          <p role="alert" class="text-sm text-danger">{{ sessionsError() }}</p>
+        }
+        @if (sessionsBusy()) {
+          <p role="status" class="text-sm text-text-secondary">{{ t('sessions-loading') }}</p>
+        }
+        <ul class="flex flex-col gap-3" [attr.aria-busy]="sessionsBusy()">
+          @for (item of sessions(); track item.id) {
+            <li
+              class="flex flex-col gap-3 rounded-md border border-border p-4 sm:flex-row sm:items-start sm:justify-between"
+            >
+              <div class="min-w-0 space-y-2">
+                @if (item.current) {
+                  <p class="text-sm font-semibold text-primary">{{ t('sessions-current') }}</p>
+                }
+                <p class="break-words text-sm text-text">
+                  {{ item.user_agent || t('sessions-unknown-browser') }}
+                </p>
+                @if (item.created_at) {
+                  <p class="text-xs text-text-secondary">
+                    {{ t('sessions-created') }} {{ sessionDate(item.created_at) }}
+                  </p>
+                }
+                <p class="text-xs text-text-secondary">
+                  {{ t('sessions-expires') }} {{ sessionDate(item.expires_at) }}
+                </p>
+              </div>
+              <button
+                type="button"
+                (click)="revoke(item)"
+                [disabled]="sessionsBusy()"
+                class="shrink-0 self-start rounded-md border border-danger/30 px-3 py-2 text-sm text-danger disabled:opacity-50"
+              >
+                {{ t(item.current ? 'sessions-sign-out' : 'sessions-revoke') }}
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
     </section>
   `,
 })
@@ -122,6 +189,67 @@ export class SettingsPage {
   readonly session = inject(SessionStore);
   private api = inject(ApiService);
   private i18n = inject(I18nService);
+  private router = inject(Router);
+  readonly sessions = signal<AccountSession[]>([]);
+  readonly sessionsBusy = signal(false);
+  readonly sessionsError = signal<string | null>(null);
+
+  constructor() {
+    void this.loadSessions();
+  }
+
+  hasOtherSessions(): boolean {
+    return this.sessions().some((item) => !item.current);
+  }
+
+  sessionDate(timestamp: number): string {
+    return new Date(timestamp * 1000).toLocaleString(this.locale());
+  }
+
+  async loadSessions(): Promise<void> {
+    if (this.sessionsBusy()) return;
+    this.sessionsBusy.set(true);
+    this.sessionsError.set(null);
+    try {
+      this.sessions.set((await this.api.sessions()).sessions);
+    } catch {
+      this.sessionsError.set(this.t('error-generic'));
+    } finally {
+      this.sessionsBusy.set(false);
+    }
+  }
+
+  async revoke(item: AccountSession): Promise<void> {
+    if (this.sessionsBusy()) return;
+    this.sessionsBusy.set(true);
+    this.sessionsError.set(null);
+    try {
+      await this.api.revokeSession(item.id);
+      this.sessions.update((items) => items.filter((entry) => entry.id !== item.id));
+      if (item.current) {
+        this.session.clear();
+        await this.router.navigateByUrl('/login');
+      }
+    } catch {
+      this.sessionsError.set(this.t('error-generic'));
+    } finally {
+      this.sessionsBusy.set(false);
+    }
+  }
+
+  async revokeOthers(): Promise<void> {
+    if (this.sessionsBusy()) return;
+    this.sessionsBusy.set(true);
+    this.sessionsError.set(null);
+    try {
+      await this.api.revokeOtherSessions();
+      this.sessions.update((items) => items.filter((item) => item.current));
+    } catch {
+      this.sessionsError.set(this.t('error-generic'));
+    } finally {
+      this.sessionsBusy.set(false);
+    }
+  }
   readonly locale = this.i18n.locale;
 
   readonly firstName = signal(this.session.user()?.first_name ?? '');

@@ -28,6 +28,9 @@ type SessionRepository interface {
 	Create(ctx context.Context, session NewSession) error
 	FindValid(ctx context.Context, tokenHash string, now int64) (*SessionRecord, error)
 	Delete(ctx context.Context, tokenHash string) error
+	ListValid(ctx context.Context, userID kernel.UserID, now int64) ([]SessionRecord, error)
+	DeleteOwned(ctx context.Context, userID kernel.UserID, tokenHash string) error
+	DeleteOthers(ctx context.Context, userID kernel.UserID, currentHash string) error
 }
 
 // PasswordHasher hashes and verifies passwords (argon2id PHC strings).
@@ -38,6 +41,8 @@ type PasswordHasher interface {
 
 // NewSession carries data for a new session row.
 type NewSession struct {
+	CreatedAt int64
+	UserAgent string
 	TokenHash string
 	UserID    kernel.UserID
 	ExpiresAt int64
@@ -45,6 +50,8 @@ type NewSession struct {
 
 // SessionRecord is a stored session.
 type SessionRecord struct {
+	CreatedAt int64
+	UserAgent string
 	TokenHash string
 	UserID    kernel.UserID
 	ExpiresAt int64
@@ -256,8 +263,8 @@ func NewSqliteSessionRepository(pool *sql.DB) *SqliteSessionRepository {
 // Create inserts a session row.
 func (r *SqliteSessionRepository) Create(ctx context.Context, session NewSession) error {
 	_, err := r.pool.ExecContext(ctx, `
-INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)`,
-		session.TokenHash, session.UserID.String(), session.ExpiresAt)
+INSERT INTO sessions (token_hash, user_id, expires_at, created_at, user_agent) VALUES (?, ?, ?, ?, ?)`,
+		session.TokenHash, session.UserID.String(), session.ExpiresAt, session.CreatedAt, session.UserAgent)
 	if err != nil {
 		return fmt.Errorf("create session: %w", err)
 	}

@@ -19,6 +19,9 @@ func NewMux(server *Server) http.Handler {
 	mux.HandleFunc("GET /api/me", server.handleMe)
 	mux.HandleFunc("POST /api/onboarding", server.handleOnboarding)
 	mux.HandleFunc("PUT /api/me/profile", server.handleProfileUpdate)
+	mux.HandleFunc("GET /api/me/sessions", server.handleSessionsList)
+	mux.HandleFunc("DELETE /api/me/sessions/{id}", server.handleSessionRevoke)
+	mux.HandleFunc("POST /api/me/sessions/revoke-others", server.handleSessionsRevokeOthers)
 
 	// Users administration.
 	mux.HandleFunc("GET /api/users", server.handleUsersList)

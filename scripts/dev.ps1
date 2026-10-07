@@ -1,4 +1,4 @@
-param([ValidateSet('setup', 'run', 'test', 'build', 'e2e')][string]$Action = 'run')
+param([ValidateSet('migrate', 'run', 'test', 'build', 'e2e')][string]$Action = 'run')
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 
@@ -48,8 +48,15 @@ try {
             throw 'Development proxy expects DINO_SERVER__ADDR=127.0.0.1:8080. Clear the override or update client/proxy.conf.json.'
         }
     }
-    Initialize-Tools
+    if ($Action -ne 'migrate') {
+        Initialize-Tools
+    }
     switch ($Action) {
+        'migrate' {
+            New-Item -ItemType Directory -Force -Path .run | Out-Null
+            Invoke-Checked go.exe @('-C', 'lms', 'build', '-o', '../.run/initializer.exe', './cmd/initializer')
+            Invoke-Checked ./.run/initializer.exe @('migrate')
+        }
         'run' {
             Build-Api
             Invoke-Checked go.exe @('-C', 'lms', 'build', '-o', '../.run/devrun.exe', './cmd/devrun')

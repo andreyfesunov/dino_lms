@@ -545,11 +545,7 @@ func (s *AuthService) ChangePassword(ctx context.Context, actor kernel.Actor, cm
 
 // PersistSession stores a session row for the token hash.
 func (s *AuthService) PersistSession(ctx context.Context, userID kernel.UserID, tokenHash []byte, expiresAt time.Time) error {
-	return s.sessions.Create(ctx, NewSession{
-		TokenHash: HashToken(tokenHash),
-		UserID:    userID,
-		ExpiresAt: expiresAt.Unix(),
-	})
+	return s.PersistBrowserSession(ctx, userID, tokenHash, expiresAt, "")
 }
 
 // DeleteSession removes the session row for the token hash.

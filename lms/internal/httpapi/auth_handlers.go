@@ -137,7 +137,7 @@ func (s *Server) handleLogin(w http.ResponseWriter, r *http.Request) {
 func (s *Server) startSession(w http.ResponseWriter, r *http.Request, userID kernel.UserID) bool {
 	token := auth.NewSessionToken()
 	expires := time.Now().Add(auth.SessionTTL)
-	if err := s.Auth.PersistSession(r.Context(), userID, token, expires); err != nil {
+	if err := s.Auth.PersistBrowserSession(r.Context(), userID, token, expires, r.UserAgent()); err != nil {
 		writeError(w, err)
 		return false
 	}

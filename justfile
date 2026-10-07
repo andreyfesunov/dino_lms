@@ -3,8 +3,8 @@ set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
 default:
     @just --list
 
-setup:
-    @& ./scripts/dev.ps1 setup
+migrate:
+    @& ./scripts/dev.ps1 migrate
 
 run:
     @& ./scripts/dev.ps1 run

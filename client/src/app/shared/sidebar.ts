@@ -156,14 +156,6 @@ type NavId = 'courses' | 'users' | 'settings' | null;
           <app-icon name="more-horizontal" extra="h-5 w-5" />
           <span class="font-body text-[11px]">{{ t('nav-more') }}</span>
         </a>
-        <button
-          type="button"
-          (click)="logout()"
-          class="flex flex-1 flex-col items-center gap-1 rounded-md py-1 text-danger hover:bg-danger/10"
-        >
-          <app-icon name="log-out" extra="h-5 w-5" />
-          <span class="font-body text-[11px]">{{ t('nav-logout') }}</span>
-        </button>
       </nav>
     }
   `,

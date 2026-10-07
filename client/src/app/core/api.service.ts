@@ -3,6 +3,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { firstValueFrom, timeout } from 'rxjs';
 import {
   BootstrapResponse,
+  AccountSession,
   CourseDetail,
   CourseListItem,
   InviteResponse,
@@ -79,6 +80,18 @@ export class ApiService {
 
   me() {
     return this.request<{ user: UserResponse }>('GET', '/api/me');
+  }
+
+  sessions() {
+    return this.request<{ sessions: AccountSession[] }>('GET', '/api/me/sessions');
+  }
+
+  revokeSession(id: string) {
+    return this.request<{ ok: boolean }>('DELETE', `/api/me/sessions/${encodeURIComponent(id)}`);
+  }
+
+  revokeOtherSessions() {
+    return this.request<{ ok: boolean }>('POST', '/api/me/sessions/revoke-others');
   }
 
   onboarding(firstName: string, lastName: string) {

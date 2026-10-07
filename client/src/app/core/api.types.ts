@@ -87,3 +87,10 @@ export interface InviteResponse {
   created: InvitedAccount[];
   skipped: string[];
 }
+export interface AccountSession {
+  id: string;
+  current: boolean;
+  created_at: number;
+  expires_at: number;
+  user_agent: string;
+}
