@@ -710,8 +710,8 @@ export class UsersPage {
     this.error.set(null);
     try {
       await action();
-    } catch {
-      this.error.set(this.t('error-generic'));
+    } catch (e) {
+      this.error.set(this.t(e instanceof ApiError && e.code === 'calls_user_busy' ? 'calls-user-busy' : 'error-generic'));
     } finally {
       this.busy.set(false);
     }

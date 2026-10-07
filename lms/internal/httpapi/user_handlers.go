@@ -211,6 +211,12 @@ func (s *Server) handleBulkDelete(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		seen[userID] = true
+		if s.Calls != nil {
+			if err := s.Calls.CheckUserRemoval(r.Context(), userID.String()); err != nil {
+				writeError(w, err)
+				return
+			}
+		}
 		ids = append(ids, userID)
 	}
 	deleted := 0

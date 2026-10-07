@@ -5,7 +5,7 @@ import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
 import { Icon } from './icon';
 
-type NavId = 'courses' | 'users' | 'settings' | null;
+type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
 
 @Component({
   selector: 'app-sidebar',
@@ -53,6 +53,13 @@ type NavId = 'courses' | 'users' | 'settings' | null;
             <span>{{ t('nav-courses') }}</span>
           </a>
 
+          <a
+            href="/calls"
+            class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 lg:justify-start"
+            [class]="navItemClass(isActive('calls'))"
+          >
+            <app-icon name="clock" /><span class="hidden lg:inline">{{ t('nav-calls') }}</span>
+          </a>
           @if (session.isAdmin()) {
             <a
               href="/users"
@@ -138,6 +145,15 @@ type NavId = 'courses' | 'users' | 'settings' | null;
           <app-icon name="graduation-cap" extra="h-5 w-5" />
           <span class="font-body text-[11px]">{{ t('nav-courses') }}</span>
         </a>
+        <a
+          href="/calls"
+          class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
+          [class]="isActive('calls') ? 'text-primary' : 'text-text-secondary'"
+        >
+          <app-icon name="clock" extra="h-5 w-5" /><span class="font-body text-[11px]">{{
+            t('nav-calls')
+          }}</span>
+        </a>
         @if (session.isAdmin()) {
           <a
             href="/users"
@@ -174,6 +190,9 @@ export class Sidebar {
 
   isActive(id: Exclude<NavId, null>): boolean {
     const url = this.router.url;
+    if (id === 'calls') {
+      return url === '/calls';
+    }
     if (id === 'users') {
       return url === '/users';
     }

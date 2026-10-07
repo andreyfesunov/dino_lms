@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/andreyfesunov/dino_lms/lms/internal/auth"
+	"github.com/andreyfesunov/dino_lms/lms/internal/calls"
 	"github.com/andreyfesunov/dino_lms/lms/internal/courses"
 	"github.com/andreyfesunov/dino_lms/lms/internal/db"
 	"github.com/andreyfesunov/dino_lms/lms/internal/kernel"
@@ -56,6 +57,7 @@ lessons = [{ id = "intro", title = "Intro" }]
 		Catalog: catalog,
 		Courses: courses.NewCourseService(catalog, courses.NewSqliteCourseRepository(pool)),
 	}
+	s.Calls = calls.New(pool, s.Courses)
 	return &fixture{t: t, server: s, handler: NewMux(s)}
 }
 

@@ -9,6 +9,10 @@ import {
   InviteResponse,
   LessonResponse,
   UserResponse,
+  CallKey,
+  CallSettings,
+  CallWindow,
+  CallBooking,
 } from './api.types';
 
 export class ApiError extends Error {
@@ -22,6 +26,39 @@ export class ApiError extends Error {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
+  private callPath(k: CallKey) {
+    return `/api/courses/${encodeURIComponent(k.course_id)}/${encodeURIComponent(k.chapter_id)}/${encodeURIComponent(k.lesson_id)}/calls`;
+  }
+  callSettings(k: CallKey) {
+    return this.request<CallSettings>('GET', this.callPath(k) + '/settings');
+  }
+  saveCallSettings(k: CallKey, settings: CallSettings) {
+    return this.request<CallSettings>('PUT', this.callPath(k) + '/settings', settings);
+  }
+  callTeachers() {
+    return this.request<{ teachers: { id: string; name: string }[] }>('GET', '/api/calls/teachers');
+  }
+  callSlots(k: CallKey, from: number, to: number, except = '') {
+    const params = new URLSearchParams({ from: String(from), to: String(to), except });
+    return this.request<{ slots: CallWindow[] }>('GET', this.callPath(k) + '/slots?' + params);
+  }
+  calls() {
+    return this.request<{ calls: CallBooking[] }>('GET', '/api/calls');
+  }
+  bookCall(k: CallKey, starts_at: number) {
+    return this.request<CallBooking>('POST', this.callPath(k), { starts_at });
+  }
+  changeCall(
+    call: CallBooking,
+    action: string,
+    patch: { starts_at?: number; meeting_url?: string } = {},
+  ) {
+    return this.request<CallBooking>('POST', `/api/calls/${encodeURIComponent(call.id)}`, {
+      action,
+      version: call.version,
+      ...patch,
+    });
+  }
   private http = inject(HttpClient);
   private pending = 0;
   readonly loading = signal(false);

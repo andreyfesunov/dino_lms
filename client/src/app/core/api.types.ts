@@ -28,6 +28,7 @@ export interface CourseListItem {
 }
 
 export interface LessonEntry {
+  type: 'article' | 'call';
   chapter_id: string;
   id: string;
   title: string;
@@ -57,6 +58,7 @@ export interface LessonNav {
 }
 
 export interface LessonResponse {
+  type: 'article' | 'call';
   course: { id: string; title: string };
   chapter: { id: string; title: string };
   id: string;
@@ -75,6 +77,40 @@ export interface LessonResponse {
   total: number;
   prev: LessonNav | null;
   next: LessonNav | null;
+}
+
+export interface CallKey {
+  course_id: string;
+  chapter_id: string;
+  lesson_id: string;
+}
+export interface CallWindow {
+  id: string;
+  starts_at: number;
+  ends_at: number;
+}
+export interface CallSettings {
+  teacher_id: string;
+  teacher_name: string;
+  duration_min: number;
+  timezone: string;
+  version: number;
+  windows: CallWindow[];
+  can_manage: boolean;
+}
+export interface CallBooking extends CallKey {
+  id: string;
+  course_title: string;
+  lesson_title: string;
+  teacher_id: string;
+  student_id: string;
+  teacher_name: string;
+  student_name: string;
+  starts_at: number;
+  ends_at: number;
+  status: 'scheduled' | 'cancelled' | 'completed';
+  meeting_url: string;
+  version: number;
 }
 
 export interface InvitedAccount {

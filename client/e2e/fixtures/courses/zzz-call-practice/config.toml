@@ -1,0 +1,10 @@
+id = "zzz-call-practice"
+title = "Call practice"
+[[chapters]]
+id = "practice"
+title = "Practice"
+open_by_default = true
+[[chapters.lessons]]
+id = "consultation"
+title = "Consultation"
+type = "call"

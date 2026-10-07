@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 
 test('fresh welcome, setup, users, grants, student onboarding and progress', async ({
   page,
@@ -211,12 +212,147 @@ test('settings translations, floating user actions and named access controls', a
   const passwordBounds = (await page.locator('[name="currentPassword"]').boundingBox())!;
   expect(languageBounds.y + languageBounds.height).toBeLessThan(passwordBounds.y);
   await page.locator('select[name="language"]').selectOption('ru');
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.locator('aside > div').last().locator('button').last().click();
   const logoutResponse = page.waitForResponse(
     (response) => response.url().endsWith('/api/logout') && response.request().method() === 'POST',
   );
-  await page.locator('nav').getByRole('button', { name: 'Выйти', exact: true }).click();
+  await page.locator('aside').getByRole('button', { name: 'Выйти', exact: true }).click();
   expect((await logoutResponse).ok()).toBeTruthy();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto('/settings');
   await expect(page).toHaveURL(/\/login$/);
+});
+
+test('call lesson availability, booking, changes, cancellation and completion', async ({
+  page,
+  browser,
+}) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto('/login');
+  await page.locator('[name="login"]').fill('admin@example.test');
+  await page.locator('[name="password"]').fill('correct horse');
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/courses$/);
+  await page.goto('/settings');
+  await page.locator('select[name="language"]').selectOption('en');
+  const createUser = async (login: string, role: string) => {
+    const response = await page.request.post('/api/students', {
+      data: { login, password: 'call password' },
+    });
+    expect(response.ok()).toBeTruthy();
+    const user = await response.json();
+    const update = await page.request.post(`/api/users/${user.id}`, {
+      data: { role, status: 'active', first_name: role, last_name: 'Calls' },
+    });
+    expect(update.ok()).toBeTruthy();
+    return user;
+  };
+  const teacher = await createUser('callteacher@example.test', 'teacher');
+  await createUser('calllearner@example.test', 'student');
+  const path = '/courses/zzz-call-practice/practice/consultation';
+  const apiPath = '/api' + path + '/calls';
+  await page.goto(path);
+  await page.getByLabel('Teacher', { exact: true }).selectOption(teacher.id);
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Settings saved');
+  const teacherContext = await browser.newContext({ locale: 'en-US' });
+  const teacherPage = await teacherContext.newPage();
+  teacherPage.on('pageerror', (e) => errors.push(e.message));
+  await teacherPage.goto('http://localhost:4201/login');
+  await teacherPage.locator('[name="login"]').fill('callteacher@example.test');
+  await teacherPage.locator('[name="password"]').fill('call password');
+  await teacherPage.locator('button[type="submit"]').click();
+  await expect(teacherPage).toHaveURL(/\/courses$/);
+  await teacherPage.goto(path);
+  await teacherPage.locator('summary').click();
+  await teacherPage.getByLabel('Schedule time zone').selectOption('UTC');
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  await teacherPage.getByLabel('Start', { exact: true }).fill(tomorrow + 'T12:00');
+  await teacherPage.getByLabel('End', { exact: true }).fill(tomorrow + 'T15:00');
+  await teacherPage.getByRole('button', { name: 'Add window', exact: true }).click();
+  await teacherPage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(teacherPage.getByRole('status')).toContainText('Settings saved');
+  const cfg = await (await page.request.get(apiPath + '/settings')).json();
+  expect(cfg.windows).toHaveLength(1);
+  expect(cfg.duration_min).toBe(30);
+
+  const studentContext = await browser.newContext({ locale: 'en-US', timezoneId: 'Europe/Moscow' });
+  const studentPage = await studentContext.newPage();
+  studentPage.on('pageerror', (e) => errors.push(e.message));
+  await studentPage.goto('http://localhost:4201/login');
+  await studentPage.locator('[name="login"]').fill('calllearner@example.test');
+  await studentPage.locator('[name="password"]').fill('call password');
+  await studentPage.locator('button[type="submit"]').click();
+  await expect(studentPage).toHaveURL(/\/courses$/);
+  await studentPage.goto(path);
+  await expect(studentPage.locator('summary')).toHaveCount(0);
+  await studentPage.getByLabel('Date', { exact: true }).fill(tomorrow);
+  await studentPage.getByRole('button', { name: '15:00–15:30', exact: true }).click();
+  await studentPage.getByRole('button', { name: /Confirm/ }).click();
+  await expect(studentPage.locator('app-call-card')).toHaveCount(1);
+  await expect(studentPage.locator('app-call-slots')).toHaveCount(0);
+  expect(
+    (
+      await studentPage.request.post('/api' + path + '/progress', { data: { done: true } })
+    ).status(),
+  ).toBe(403);
+  const list = await (await studentPage.request.get('/api/calls')).json();
+  const call = list.calls[0];
+  expect(call.starts_at).toBe(Date.parse(tomorrow + 'T12:00:00Z') / 1000);
+
+  await teacherPage.goto('/calls');
+  await teacherPage.getByRole('button', { name: 'Meeting link', exact: true }).click();
+  await teacherPage
+    .getByLabel('Meeting link', { exact: true })
+    .fill('https://meet.example.test/consultation');
+  await teacherPage.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(teacherPage.getByRole('link', { name: 'Join call' })).toHaveAttribute(
+    'href',
+    'https://meet.example.test/consultation',
+  );
+  await studentPage.goto('/calls');
+  await expect(studentPage.getByRole('link', { name: 'Join call' })).toBeVisible();
+  await studentPage.getByRole('button', { name: 'Reschedule', exact: true }).click();
+  await studentPage.getByLabel('Date', { exact: true }).fill(tomorrow);
+  await studentPage.getByRole('button', { name: '15:30–16:00', exact: true }).click();
+  await studentPage.getByRole('button', { name: /Confirm/ }).click();
+  await expect(studentPage.locator('app-call-slots')).toHaveCount(0);
+  await studentPage.getByRole('button', { name: 'Cancel call', exact: true }).click();
+  await studentPage.getByRole('button', { name: 'Confirm', exact: true }).click();
+  await expect(studentPage.locator('app-call-card')).toHaveCount(0);
+  await studentPage.goto(path);
+  await studentPage.getByLabel('Date', { exact: true }).fill(tomorrow);
+  await studentPage.getByRole('button', { name: '15:00–15:30', exact: true }).click();
+  await studentPage.getByRole('button', { name: /Confirm/ }).click();
+  await expect(studentPage.locator('app-call-slots')).toHaveCount(0);
+  const newCall = (await (await studentPage.request.get('/api/calls')).json()).calls.find(
+    (c: { status: string }) => c.status === 'scheduled',
+  );
+  // Simulate elapsed time in the isolated fixture rather than waiting for a real call.
+  execFileSync('python', [
+    '-c',
+    "import sqlite3,sys,time; db=sqlite3.connect(sys.argv[1]); now=int(time.time()); db.execute('UPDATE calls SET starts_at=?, ends_at=?, version=version+1 WHERE id=?',(now-3600,now-1800,sys.argv[2])); db.commit(); db.close()",
+    process.env['DINO_E2E_DATABASE_PATH']!,
+    newCall.id,
+  ]);
+  await teacherPage.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await teacherPage.getByRole('button', { name: 'History', exact: true }).click();
+  await teacherPage.getByRole('button', { name: 'Mark as completed', exact: true }).click();
+  await expect(
+    teacherPage.getByRole('button', { name: 'Mark as completed', exact: true }),
+  ).toHaveCount(0);
+  await studentPage.reload();
+  await expect(studentPage.locator('app-call-slots')).toHaveCount(0);
+  const lesson = await (await studentPage.request.get('/api' + path)).json();
+  expect(lesson.done).toBe(true);
+  for (const p of [teacherPage, studentPage]) {
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.goto('/calls');
+    expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  }
+  expect(errors).toEqual([]);
+  await studentContext.close();
+  await teacherContext.close();
 });

@@ -22,6 +22,7 @@ type chapterJSON struct {
 }
 
 type lessonJSON struct {
+	Type        string   `json:"type"`
 	ChapterID   string   `json:"chapter_id"`
 	ID          string   `json:"id"`
 	Title       string   `json:"title"`
@@ -161,6 +162,7 @@ func (s *Server) handleCourseDetail(w http.ResponseWriter, r *http.Request) {
 		for li := range chapter.Lessons {
 			lesson := &chapter.Lessons[li]
 			chapterOut.Lessons = append(chapterOut.Lessons, lessonJSON{
+				Type:        lesson.Kind(),
 				ChapterID:   chapter.ID,
 				ID:          lesson.ID,
 				Title:       lesson.Title,
@@ -209,6 +211,23 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if lesson.Kind() == "call" {
+		completed, err := s.Courses.CompletedLessons(r.Context(), *actor, courseID)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		prev, next := s.Courses.LessonNeighbours(course, chapterID, lessonID)
+		ref := s.Courses.FindLesson(course, chapterID, lessonID)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"type": "call", "course": map[string]string{"id": course.ID, "title": course.Title},
+			"chapter": map[string]string{"id": chapter.ID, "title": chapter.Title}, "id": lessonID, "title": lesson.Title,
+			"durationMin": lesson.DurationMin, "html": "", "videos": []mediaVideo{}, "youtube": []mediaYoutube{},
+			"done": containsString(completed, courses.LessonKey(chapterID, lessonID)), "index": ref.Index, "total": course.TotalLessons(),
+			"prev": toNav(courseID, prev), "next": toNav(courseID, next), "state": string(state),
+		})
+		return
+	}
 	raw, err := s.readLesson(courseID, chapterID, lessonID)
 	if err != nil {
 		writeError(w, err)
@@ -253,6 +272,7 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"course":      map[string]any{"id": course.ID, "title": course.Title},
+		"type":        lesson.Kind(),
 		"chapter":     map[string]any{"id": chapter.ID, "title": chapter.Title},
 		"id":          lessonID,
 		"title":       title,

@@ -1,7 +1,15 @@
 import { defineConfig } from '@playwright/test';
 import { resolve } from 'node:path';
+import { cpSync, mkdirSync } from 'node:fs';
 
 const root = resolve(__dirname, '..');
+const testCourses = resolve(root, '.run', 'e2e-courses');
+mkdirSync(testCourses, { recursive: true });
+cpSync(resolve(root, 'courses'), testCourses, { recursive: true });
+cpSync(resolve(__dirname, 'e2e/fixtures/courses'), testCourses, { recursive: true });
+const testDatabase =
+  process.env['DINO_E2E_DATABASE_PATH'] || resolve(root, '.run', `e2e-${Date.now()}.sqlite`);
+process.env['DINO_E2E_DATABASE_PATH'] = testDatabase;
 
 export default defineConfig({
   testDir: './e2e',
@@ -20,8 +28,8 @@ export default defineConfig({
       url: 'http://127.0.0.1:8081/api/bootstrap',
       env: {
         DINO_SERVER__ADDR: '127.0.0.1:8081',
-        DINO_DATABASE__PATH: resolve(root, '.run', `e2e-${Date.now()}.sqlite`),
-        DINO_COURSES__DIR: resolve(root, 'courses'),
+        DINO_DATABASE__PATH: testDatabase,
+        DINO_COURSES__DIR: testCourses,
       },
       timeout: 120000,
     },

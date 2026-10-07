@@ -3,11 +3,12 @@ import { ApiService } from '../../core/api.service';
 import { LessonResponse } from '../../core/api.types';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
+import { CallLesson } from '../../shared/call-lesson';
 
 @Component({
   selector: 'app-lesson',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
+  imports: [Icon, CallLesson],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
@@ -41,7 +42,13 @@ import { Icon } from '../../shared/icon';
 
         <div class="h-px bg-border"></div>
 
-        <div class="md-body flex flex-col" [innerHTML]="l.html"></div>
+        @if (l.type === 'call') {
+          <app-call-lesson
+            [key]="{ course_id: l.course.id, chapter_id: l.chapter.id, lesson_id: l.id }"
+          />
+        } @else {
+          <div class="md-body flex flex-col" [innerHTML]="l.html"></div>
+        }
 
         @if (l.videos.length > 0) {
           <div class="flex flex-col gap-3">
@@ -146,19 +153,21 @@ import { Icon } from '../../shared/icon';
               </a>
             }
           </div>
-          <button
-            type="button"
-            [disabled]="busy()"
-            (click)="toggleDone()"
-            [class]="
-              done()
-                ? 'inline-flex items-center gap-2 rounded-md border border-border bg-input px-3.5 py-2 font-body text-[13px] font-medium text-text-secondary hover:bg-border'
-                : 'inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-body text-[13px] font-semibold text-text-inverse hover:bg-inverse'
-            "
-          >
-            <app-icon name="check-circle" extra="h-4 w-4" />
-            {{ done() ? t('lesson-mark-undone') : t('lesson-mark-done') }}
-          </button>
+          @if (l.type !== 'call') {
+            <button
+              type="button"
+              [disabled]="busy()"
+              (click)="toggleDone()"
+              [class]="
+                done()
+                  ? 'inline-flex items-center gap-2 rounded-md border border-border bg-input px-3.5 py-2 font-body text-[13px] font-medium text-text-secondary hover:bg-border'
+                  : 'inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-body text-[13px] font-semibold text-text-inverse hover:bg-inverse'
+              "
+            >
+              <app-icon name="check-circle" extra="h-4 w-4" />
+              {{ done() ? t('lesson-mark-undone') : t('lesson-mark-done') }}
+            </button>
+          }
         </div>
       </section>
     }

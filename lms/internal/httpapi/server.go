@@ -6,15 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/andreyfesunov/dino_lms/lms/internal/auth"
+	"github.com/andreyfesunov/dino_lms/lms/internal/calls"
 	"github.com/andreyfesunov/dino_lms/lms/internal/courses"
 	"github.com/andreyfesunov/dino_lms/lms/internal/kernel"
 )
 
 // Server carries the wired services for the HTTP handlers.
 type Server struct {
+	Calls   *calls.Service
 	Auth    *auth.AuthService
 	Courses *courses.CourseService
 	Catalog *courses.Catalog
@@ -41,8 +44,22 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 func writeError(w http.ResponseWriter, err error) {
 	var authErr *auth.AuthError
 	var coursesErr *courses.CoursesError
+	var callErr *calls.Error
 
 	switch {
+	case strings.Contains(err.Error(), "calls_user_busy"):
+		writeJSON(w, http.StatusConflict, map[string]string{"code": "calls_user_busy"})
+	case errors.As(err, &callErr):
+		status := http.StatusBadRequest
+		switch callErr.Code {
+		case "forbidden":
+			status = http.StatusForbidden
+		case "not_found":
+			status = http.StatusNotFound
+		case "conflict", "calls_teacher_busy", "calls_user_busy":
+			status = http.StatusConflict
+		}
+		writeJSON(w, status, map[string]string{"code": callErr.Code})
 	case errors.As(err, &authErr):
 		status := http.StatusBadRequest
 		switch authErr.Code {

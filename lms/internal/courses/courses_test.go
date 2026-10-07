@@ -68,6 +68,26 @@ func TestSkipsInvalidBundles(t *testing.T) {
 	}
 }
 
+func TestTypedLessonsAndMarkdownCompatibility(t *testing.T) {
+	root := t.TempDir()
+	writeCourse(t, root, "sample", `lessons = [{id="intro",title="Article"},{id="consultation",title="Call",type="call"}]`)
+	config, err := LoadCourseConfig(filepath.Join(root, "sample"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if config.Lesson("ch1", "intro").Kind() != "article" || config.Lesson("ch1", "consultation").Kind() != "call" {
+		t.Fatal("wrong lesson types")
+	}
+	writeCourse(t, root, "unknown", `lessons = [{id="intro",type="unknown"}]`)
+	if _, err = LoadCourseConfig(filepath.Join(root, "unknown")); err == nil {
+		t.Fatal("unknown lesson type accepted")
+	}
+	writeCourse(t, root, "missing", `lessons = [{id="absent",type="article"}]`)
+	if _, err = LoadCourseConfig(filepath.Join(root, "missing")); err == nil {
+		t.Fatal("article without markdown accepted")
+	}
+}
+
 func TestCatalogCacheInvalidation(t *testing.T) {
 	root := t.TempDir()
 	writeCourse(t, root, "a-course", "lessons = [{ id = \"intro\" }]")

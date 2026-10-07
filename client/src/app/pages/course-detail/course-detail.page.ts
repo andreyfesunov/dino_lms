@@ -179,6 +179,30 @@ import { Icon } from '../../shared/icon';
                   </span>
                 }
               </div>
+              <div class="mt-4 flex flex-col gap-2 border-t border-border pt-3">
+                @for (lesson of chapter.lessons; track lesson.id) {
+                  @if (chapter.state === 'open') {
+                    <a
+                      [href]="'/courses/' + m.course.id + '/' + chapter.id + '/' + lesson.id"
+                      class="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-input"
+                    >
+                      <app-icon
+                        [name]="lesson.type === 'call' ? 'clock' : 'file-text'"
+                        extra="h-4 w-4"
+                      />
+                      <span>{{ lesson.title }}</span>
+                      @if (lesson.type === 'call') {
+                        <span class="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">{{
+                          t('course-lesson-call')
+                        }}</span>
+                      }
+                      @if (lesson.done) {
+                        <app-icon name="check-circle" extra="h-4 w-4 text-primary" />
+                      }
+                    </a>
+                  }
+                }
+              </div>
             </div>
           }
         </div>

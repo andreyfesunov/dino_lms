@@ -13,6 +13,11 @@ export const routes: Routes = [
     component: Shell,
     children: [
       {
+        path: 'calls',
+        canActivate: [onboardedGuard],
+        loadComponent: () => import('./pages/calls/calls.page').then((m) => m.CallsPage),
+      },
+      {
         path: 'courses',
         canActivate: [onboardedGuard],
         loadComponent: () => import('./pages/courses/courses.page').then((m) => m.CoursesPage),

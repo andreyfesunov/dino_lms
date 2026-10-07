@@ -46,6 +46,7 @@ type ChapterConfig struct {
 
 // LessonConfig declares one markdown lesson.
 type LessonConfig struct {
+	Type        string  `toml:"type"`
 	ID          string  `toml:"id"`
 	Title       string  `toml:"title"`
 	DurationMin *uint32 `toml:"duration_min"`
@@ -101,6 +102,9 @@ func (c *CourseConfig) validate(bundleDir string) error {
 		}
 		lessonIDs := map[string]bool{}
 		for _, lesson := range chapter.Lessons {
+			if lesson.Type != "" && lesson.Type != "article" && lesson.Type != "call" {
+				return ConfigError(path, "unknown lesson type: "+lesson.Type)
+			}
 			if !IsValidSlug(lesson.ID) {
 				return ConfigError(path, fmt.Sprintf("lesson id `%s.%s` is not a valid slug", chapter.ID, lesson.ID))
 			}
@@ -108,6 +112,9 @@ func (c *CourseConfig) validate(bundleDir string) error {
 				return ConfigError(path, fmt.Sprintf("duplicate lesson id `%s.%s`", chapter.ID, lesson.ID))
 			}
 			lessonIDs[lesson.ID] = true
+			if lesson.Type == "call" {
+				continue
+			}
 			file := filepath.Join(bundleDir, chapter.ID, lesson.ID+".md")
 			info, err := os.Stat(file)
 			if err != nil || info.IsDir() {
@@ -116,6 +123,14 @@ func (c *CourseConfig) validate(bundleDir string) error {
 		}
 	}
 	return nil
+}
+
+// Kind preserves compatibility with courses written before typed lessons.
+func (l *LessonConfig) Kind() string {
+	if l.Type == "" {
+		return "article"
+	}
+	return l.Type
 }
 
 // Chapter finds a chapter by id.

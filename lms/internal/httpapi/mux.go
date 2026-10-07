@@ -32,6 +32,13 @@ func NewMux(server *Server) http.Handler {
 	mux.HandleFunc("POST /api/students", server.handleStudentCreate)
 
 	// Courses.
+	mux.HandleFunc("GET /api/calls", server.handleCalls)
+	mux.HandleFunc("GET /api/calls/teachers", server.handleCallTeachers)
+	mux.HandleFunc("POST /api/calls/{id}", server.handleCallChange)
+	mux.HandleFunc("GET /api/courses/{course}/{chapter}/{lesson}/calls/settings", server.handleCallSettings)
+	mux.HandleFunc("PUT /api/courses/{course}/{chapter}/{lesson}/calls/settings", server.handleCallSettings)
+	mux.HandleFunc("GET /api/courses/{course}/{chapter}/{lesson}/calls/slots", server.handleCallSlots)
+	mux.HandleFunc("POST /api/courses/{course}/{chapter}/{lesson}/calls", server.handleCallBook)
 	mux.HandleFunc("GET /api/courses", server.handleCoursesList)
 	mux.HandleFunc("GET /api/courses/{course}/students", server.handleCourseStudents)
 	mux.HandleFunc("GET /api/courses/{course}/students/{user}/chapters", server.handleStudentChaptersGet)

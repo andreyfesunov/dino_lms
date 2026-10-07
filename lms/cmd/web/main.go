@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/andreyfesunov/dino_lms/lms/internal/auth"
+	"github.com/andreyfesunov/dino_lms/lms/internal/calls"
 	"github.com/andreyfesunov/dino_lms/lms/internal/config"
 	"github.com/andreyfesunov/dino_lms/lms/internal/courses"
 	"github.com/andreyfesunov/dino_lms/lms/internal/db"
@@ -44,6 +45,7 @@ func run(cfg config.Config) error {
 	courseService := courses.NewCourseService(catalog, courses.NewSqliteCourseRepository(pool))
 
 	server := &httpapi.Server{
+		Calls:   calls.New(pool, courseService),
 		Auth:    authService,
 		Courses: courseService,
 		Catalog: catalog,
