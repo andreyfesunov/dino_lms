@@ -1,0 +1,28 @@
+# syntax=docker/dockerfile:1
+FROM golang:1.26-alpine AS build
+WORKDIR /src/lms
+COPY lms/go.mod lms/go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+COPY lms/ ./
+COPY VERSION /src/VERSION
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    APP_VERSION="$(tr -d '\r\n' < /src/VERSION)" && \
+    test -n "$APP_VERSION" && \
+    CGO_ENABLED=0 go build -trimpath \
+      -ldflags="-s -w -X github.com/andreyfesunov/dino_lms/lms/internal/buildinfo.Version=${APP_VERSION}" \
+      -o /out/web ./cmd/web && \
+    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/initializer ./cmd/initializer
+
+FROM alpine:3.22
+RUN apk add --no-cache ca-certificates tzdata && \
+    addgroup -S dino && adduser -S -G dino dino && \
+    mkdir -p /app/data && chown dino:dino /app/data
+WORKDIR /app
+COPY --from=build /out/web /out/initializer ./
+COPY --chown=dino:dino courses/ ./courses/
+ENV DINO_SERVER__ADDR=0.0.0.0:8080 \
+    DINO_DATABASE__PATH=/app/data/dino.sqlite \
+    DINO_COURSES__DIR=/app/courses
+USER dino
+EXPOSE 8080
+ENTRYPOINT ["/app/web"]
