@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
 import { DinoLogo } from '../../shared/dino-logo';
@@ -8,7 +9,7 @@ import { Icon } from '../../shared/icon';
 @Component({
   selector: 'app-welcome',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DinoLogo, Icon],
+  imports: [DinoLogo, Icon, RouterLink],
   template: `
     <div class="welcome relative min-h-screen overflow-hidden bg-inverse text-text-inverse">
       <img
@@ -60,7 +61,7 @@ import { Icon } from '../../shared/icon';
             {{ t('welcome-desc') }}
           </p>
           <a
-            [href]="welcomeHref()"
+            [routerLink]="welcomeHref()"
             class="welcome__cta mt-2 inline-flex h-[52px] w-full items-center justify-center gap-2 rounded-md bg-surface px-7 font-body text-base font-semibold text-primary hover:bg-surface/95 focus:outline-none focus:ring-2 focus:ring-primary-soft/50 md:w-auto"
           >
             {{ welcomeCta() }}

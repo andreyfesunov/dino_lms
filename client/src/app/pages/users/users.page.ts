@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService, ApiError } from '../../core/api.service';
 import { InvitedAccount, UserResponse } from '../../core/api.types';
 import { SessionStore } from '../../core/session.store';
@@ -9,7 +10,7 @@ import { Icon } from '../../shared/icon';
 @Component({
   selector: 'app-users',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, RouterLink],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
@@ -24,7 +25,7 @@ import { Icon } from '../../shared/icon';
         </div>
         <div class="flex items-center gap-2">
           <a
-            href="/students/new"
+            routerLink="/students/new"
             class="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2.5 font-body text-sm font-medium text-text hover:bg-input"
           >
             <app-icon name="user-plus" extra="h-4 w-4" />
@@ -184,7 +185,7 @@ import { Icon } from '../../shared/icon';
                       {{ t('users-action-password') }}
                     </button>
                     <a
-                      href="/courses"
+                      routerLink="/courses"
                       class="flex w-full items-center gap-2 px-3 py-2 text-left font-body text-sm text-text hover:bg-input"
                     >
                       <app-icon name="graduation-cap" extra="h-4 w-4" />

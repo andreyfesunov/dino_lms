@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
@@ -7,14 +8,14 @@ import { Icon } from '../../shared/icon';
 @Component({
   selector: 'app-create-student',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, RouterLink],
   template: `
     <section
       class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
     >
       <div class="flex items-center justify-between gap-4">
         <a
-          href="/users"
+          routerLink="/users"
           class="inline-flex items-center gap-2 font-body text-[13px] text-text-secondary hover:text-text"
         >
           <app-icon name="arrow-left" extra="h-4 w-4" />
@@ -77,7 +78,7 @@ import { Icon } from '../../shared/icon';
           </button>
           @if (temporaryPassword()) {
             <a
-              href="/users"
+              routerLink="/users"
               class="inline-flex h-12 items-center rounded-md border border-border px-5 font-body text-sm font-medium text-text hover:bg-input"
             >
               {{ t('students-back-to-users') }}

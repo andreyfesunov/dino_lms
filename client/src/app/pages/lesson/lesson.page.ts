@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/api.service';
 import { LessonResponse } from '../../core/api.types';
 import { I18nService } from '../../core/i18n.service';
@@ -8,7 +10,7 @@ import { CallLesson } from '../../shared/call-lesson';
 @Component({
   selector: 'app-lesson',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, CallLesson],
+  imports: [Icon, CallLesson, RouterLink],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
@@ -19,7 +21,7 @@ import { CallLesson } from '../../shared/call-lesson';
       >
         <div class="flex items-center justify-between gap-4">
           <a
-            [href]="'/courses/' + l.course.id"
+            [routerLink]="'/courses/' + l.course.id"
             class="inline-flex items-center gap-2 font-body text-[13px] text-text-secondary hover:text-text"
           >
             <app-icon name="arrow-left" extra="h-4 w-4" />
@@ -134,7 +136,7 @@ import { CallLesson } from '../../shared/call-lesson';
           <div class="flex flex-wrap items-center gap-2">
             @if (l.prev; as prev) {
               <a
-                [href]="lessonHref(prev.chapter_id, prev.lesson_id)"
+                [routerLink]="lessonHref(prev.chapter_id, prev.lesson_id)"
                 class="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 font-body text-[13px] font-medium text-text-secondary hover:bg-input"
               >
                 <app-icon name="arrow-left" extra="h-3.5 w-3.5" />
@@ -144,7 +146,7 @@ import { CallLesson } from '../../shared/call-lesson';
             }
             @if (l.next; as next) {
               <a
-                [href]="lessonHref(next.chapter_id, next.lesson_id)"
+                [routerLink]="lessonHref(next.chapter_id, next.lesson_id)"
                 class="inline-flex items-center gap-2 rounded-md bg-primary px-3.5 py-2 font-body text-[13px] font-semibold text-text-inverse hover:bg-inverse"
               >
                 {{ t('lesson-next') }}
@@ -176,34 +178,46 @@ import { CallLesson } from '../../shared/call-lesson';
 export class LessonPage {
   private api = inject(ApiService);
   private i18n = inject(I18nService);
+  private activatedRoute = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   readonly lesson = signal<LessonResponse | null>(null);
   readonly done = signal(false);
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
-  private route = { course: '', chapter: '', lesson: '' };
+  private routeIds = { course: '', chapter: '', lesson: '' };
+  private loadGeneration = 0;
 
   t(key: string, args?: Record<string, unknown>): string {
     return this.i18n.format(key, args);
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
+    this.activatedRoute.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => {
+        this.routeIds = {
+          course: params.get('courseId') ?? '',
+          chapter: params.get('chapterId') ?? '',
+          lesson: params.get('lessonId') ?? '',
+        };
+        void this.loadLesson();
+      });
+  }
+
+  private async loadLesson(): Promise<void> {
+    const generation = ++this.loadGeneration;
     try {
-      const parts = location.pathname.split('/').filter(Boolean);
-      this.route = {
-        course: parts[1] ?? '',
-        chapter: parts[2] ?? '',
-        lesson: parts[3] ?? '',
-      };
       const lesson = await this.api.lesson(
-        this.route.course,
-        this.route.chapter,
-        this.route.lesson,
+        this.routeIds.course,
+        this.routeIds.chapter,
+        this.routeIds.lesson,
       );
+      if (generation !== this.loadGeneration) return;
       this.lesson.set(lesson);
       this.done.set(lesson.done);
     } catch {
-      this.error.set(this.t('error-generic'));
+      if (generation === this.loadGeneration) this.error.set(this.t('error-generic'));
     }
   }
 
@@ -229,7 +243,7 @@ export class LessonPage {
   }
 
   lessonHref(chapterId: string, lessonId: string): string {
-    return `/courses/${this.route.course}/${chapterId}/${lessonId}`;
+    return `/courses/${this.routeIds.course}/${chapterId}/${lessonId}`;
   }
 
   async toggleDone(): Promise<void> {
@@ -241,9 +255,9 @@ export class LessonPage {
     const next = !this.done();
     try {
       const result = await this.api.progress(
-        this.route.course,
-        this.route.chapter,
-        this.route.lesson,
+        this.routeIds.course,
+        this.routeIds.chapter,
+        this.routeIds.lesson,
         next,
       );
       this.done.set(result.done);

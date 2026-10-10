@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { CourseDetail, UserResponse } from '../../core/api.types';
 import { SessionStore } from '../../core/session.store';
@@ -9,7 +10,7 @@ import { Icon } from '../../shared/icon';
 @Component({
   selector: 'app-course-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, RouterLink],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
@@ -20,7 +21,7 @@ import { Icon } from '../../shared/icon';
       >
         <div class="flex items-center justify-between gap-4">
           <a
-            href="/courses"
+            routerLink="/courses"
             class="inline-flex items-center gap-2 font-body text-[13px] text-text-secondary hover:text-text"
           >
             <app-icon name="arrow-left" extra="h-4 w-4" />
@@ -92,7 +93,7 @@ import { Icon } from '../../shared/icon';
 
         @if (firstOpen(m); as link) {
           <a
-            [href]="link"
+            [routerLink]="link"
             class="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
           >
             {{ t('course-chapter-open') }}
@@ -163,7 +164,7 @@ import { Icon } from '../../shared/icon';
                 </div>
                 @if (chapter.state === 'open' && chapter.lessons.length > 0) {
                   <a
-                    [href]="
+                    [routerLink]="
                       '/courses/' + m.course.id + '/' + chapter.id + '/' + chapter.lessons[0].id
                     "
                     class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 font-body text-xs font-semibold text-text-inverse hover:bg-inverse"
@@ -183,7 +184,7 @@ import { Icon } from '../../shared/icon';
                 @for (lesson of chapter.lessons; track lesson.id) {
                   @if (chapter.state === 'open') {
                     <a
-                      [href]="'/courses/' + m.course.id + '/' + chapter.id + '/' + lesson.id"
+                      [routerLink]="'/courses/' + m.course.id + '/' + chapter.id + '/' + lesson.id"
                       class="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-input"
                     >
                       <app-icon

@@ -19,10 +19,10 @@ RUN apk add --no-cache ca-certificates tzdata && \
     mkdir -p /app/data && chown dino:dino /app/data
 WORKDIR /app
 COPY --from=build /out/web /out/initializer ./
-COPY --chown=dino:dino courses/ ./courses/
 ENV DINO_SERVER__ADDR=0.0.0.0:8080 \
     DINO_DATABASE__PATH=/app/data/dino.sqlite \
     DINO_COURSES__DIR=/app/courses
+RUN mkdir -p /app/courses && chown dino:dino /app/courses
 USER dino
 EXPOSE 8080
 ENTRYPOINT ["/app/web"]

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
@@ -10,7 +10,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
 @Component({
   selector: 'app-sidebar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon],
+  imports: [Icon, RouterLink],
   template: `
     @if (session.signedIn()) {
       <aside
@@ -38,14 +38,14 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           }
 
           <a
-            href="/courses"
+            routerLink="/courses"
             class="items-center justify-center rounded-md p-2.5 lg:hidden"
             [class]="navIconClass(isActive('courses'))"
           >
             <app-icon name="graduation-cap" [extra]="tone(isActive('courses'))" />
           </a>
           <a
-            href="/courses"
+            routerLink="/courses"
             class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
             [class]="navItemClass(isActive('courses'))"
           >
@@ -54,7 +54,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           </a>
 
           <a
-            href="/calls"
+            routerLink="/calls"
             class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 lg:justify-start"
             [class]="navItemClass(isActive('calls'))"
           >
@@ -62,14 +62,14 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           </a>
           @if (session.isAdmin()) {
             <a
-              href="/users"
+              routerLink="/users"
               class="items-center justify-center rounded-md p-2.5 lg:hidden"
               [class]="navIconClass(isActive('users'))"
             >
               <app-icon name="user-cog" [extra]="tone(isActive('users'))" />
             </a>
             <a
-              href="/users"
+              routerLink="/users"
               class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
               [class]="navItemClass(isActive('users'))"
             >
@@ -84,14 +84,14 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             <div class="profile-menu__panel">
               <div class="profile-menu__inner flex flex-col gap-1">
                 <a
-                  href="/settings"
+                  routerLink="/settings"
                   class="items-center justify-center rounded-md p-2.5 lg:hidden"
                   [class]="navIconClass(isActive('settings'))"
                 >
                   <app-icon name="settings" [extra]="tone(isActive('settings'))" />
                 </a>
                 <a
-                  href="/settings"
+                  routerLink="/settings"
                   class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
                   [class]="navItemClass(isActive('settings'))"
                 >
@@ -141,7 +141,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
         class="fixed inset-x-0 bottom-0 z-40 flex items-end justify-between gap-1 border-t border-border bg-surface px-3 pb-3 pt-2 md:hidden"
       >
         <a
-          href="/courses"
+          routerLink="/courses"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('courses') ? 'text-primary' : 'text-text-secondary'"
         >
@@ -149,7 +149,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           <span class="font-body text-[11px]">{{ t('nav-courses') }}</span>
         </a>
         <a
-          href="/calls"
+          routerLink="/calls"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('calls') ? 'text-primary' : 'text-text-secondary'"
         >
@@ -159,7 +159,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
         </a>
         @if (session.isAdmin()) {
           <a
-            href="/users"
+            routerLink="/users"
             class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
             [class]="isActive('users') ? 'text-primary' : 'text-text-secondary'"
           >
@@ -168,7 +168,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           </a>
         }
         <a
-          href="/settings"
+          routerLink="/settings"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('settings') ? 'text-primary' : 'text-text-secondary'"
         >

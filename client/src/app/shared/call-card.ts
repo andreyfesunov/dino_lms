@@ -4,19 +4,20 @@ import { ApiService, ApiError } from '../core/api.service';
 import { CallBooking } from '../core/api.types';
 import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
+import { RouterLink } from '@angular/router';
 import { CallSlots } from './call-slots';
 import { localCallInput, localCallTime } from './call-time';
 
 @Component({
   selector: 'app-call-card',
-  imports: [FormsModule, CallSlots],
+  imports: [FormsModule, CallSlots, RouterLink],
   template: `
     <article class="flex flex-col gap-3 rounded-lg border border-border p-4">
       <div class="flex flex-wrap items-start justify-between gap-2">
         <div>
           <a
             class="font-semibold text-primary"
-            [href]="
+            [routerLink]="
               '/courses/' + call().course_id + '/' + call().chapter_id + '/' + call().lesson_id
             "
             >{{ call().lesson_title }}</a

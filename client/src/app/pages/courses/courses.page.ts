@@ -15,7 +15,7 @@ interface CourseRow {
 @Component({
   selector: 'app-courses',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, RouterLink],
   template: `
     <section
       class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
@@ -77,7 +77,7 @@ interface CourseRow {
       <div class="flex flex-col gap-4">
         @for (row of rows(); track row.course.id) {
           <a
-            [href]="'/courses/' + row.course.id"
+            [routerLink]="'/courses/' + row.course.id"
             class="group block rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-input/40"
           >
             <div class="flex items-start justify-between gap-4">
