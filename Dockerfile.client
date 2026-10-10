@@ -1,10 +1,9 @@
 # syntax=docker/dockerfile:1
 FROM node:24-alpine AS build
 WORKDIR /src/client
-COPY client/package.json client/package-lock.json ./
+COPY client/.npmrc client/package.json client/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
-    npm ci --no-audit --no-fund --registry=https://registry.npmjs.org \
-      --replace-registry-host=registry.truvisibility.com
+    npm ci --no-audit --no-fund
 COPY client/ ./
 RUN npm run build
 

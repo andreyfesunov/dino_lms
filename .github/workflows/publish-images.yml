@@ -65,7 +65,7 @@ jobs:
 
       - name: Check client
         run: |
-          npm --prefix client ci --no-audit --no-fund --registry=https://registry.npmjs.org --replace-registry-host=registry.truvisibility.com
+          npm --prefix client ci --no-audit --no-fund
           npm --prefix client test -- --watch=false
 
   publish:
