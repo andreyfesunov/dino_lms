@@ -222,6 +222,21 @@ export class ApiService {
     );
   }
 
+  assignCourse(course: string, userId: string) {
+    return this.request<{ open_chapters: string[] }>(
+      'POST',
+      `/api/courses/${course}/students/${userId}`,
+      {},
+    );
+  }
+
+  revokeCourse(course: string, userId: string) {
+    return this.request<{ open_chapters: string[] }>(
+      'DELETE',
+      `/api/courses/${course}/students/${userId}`,
+    );
+  }
+
   studentChapters(course: string, userId: string) {
     return this.request<{ open_chapters: string[] }>(
       'GET',

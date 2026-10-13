@@ -24,6 +24,7 @@ export interface CourseListItem {
   archived: boolean;
   estimated_hours: string | null;
   total_lessons: number;
+  total_chapters: number;
   progress: number;
   students: number;
 }

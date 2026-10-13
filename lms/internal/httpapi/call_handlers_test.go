@@ -39,6 +39,9 @@ lessons=[{id="call",title="Call",type="call"}]
 			t.Fatal(err)
 		}
 		f.request("POST", "/api/users/"+out.ID, fmt.Sprintf(`{"role":%q,"status":"active","first_name":"Test","last_name":"User"}`, role), admin, 200)
+		if role == "student" {
+			f.request("POST", "/api/courses/call-course/students/"+out.ID, "{}", admin, 200)
+		}
 		w = f.request("POST", "/api/login", fmt.Sprintf(`{"login":%q,"password":"call password"}`, login), nil, 200)
 		return out.ID, w.Result().Cookies()[0]
 	}

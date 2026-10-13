@@ -305,3 +305,8 @@ calls-tab-history = History
 calls-tab-all = All
 calls-refresh = Refresh
 calls-empty = No calls here yet.
+
+access-default-hint = Assignment opens only the default chapters. You can change access to each chapter later.
+access-no-matches = No students found
+access-saving = Saving…
+access-retry = Retry loading

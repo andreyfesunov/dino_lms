@@ -1,16 +1,24 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  HostListener,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { CourseDetail, UserResponse } from '../../core/api.types';
 import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
+import { StudentPicker } from '../../shared/student-picker';
+import { DialogFocus } from '../../shared/dialog-focus';
 
 @Component({
   selector: 'app-course-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon, RouterLink],
+  imports: [Icon, RouterLink, StudentPicker, DialogFocus],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
@@ -206,59 +214,175 @@ import { Icon } from '../../shared/icon';
 
         @if (manageOpen()) {
           <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A28]/40 p-4">
-            <div class="w-full max-w-lg rounded-xl bg-surface p-6 shadow-xl">
-              <div class="mb-4 flex items-start justify-between gap-4">
-                <div>
-                  <h2 class="font-heading text-xl font-semibold text-text">
-                    {{
-                      studentId()
-                        ? t('access-modal-title', { name: studentName() })
-                        : t('access-chapter-title')
-                    }}
-                  </h2>
-                  <p class="mt-1 font-body text-sm text-text-secondary">
-                    {{ m.course.title }}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  class="rounded-md p-1 text-text-secondary hover:bg-input"
-                  (click)="manageOpen.set(false)"
-                >
-                  <app-icon name="x" />
-                </button>
-              </div>
-
-              <label class="flex flex-col gap-1.5 font-body text-[13px] font-medium text-text">
-                {{ t('access-student-label') }}
-                <select
-                  [ngModel]="studentId()"
-                  (ngModelChange)="onStudentChange($event)"
-                  class="h-11 rounded-md border-0 bg-input px-3 font-body text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  @for (student of studentList(); track student.id) {
-                    <option [value]="student.id">{{ student.display_name }}</option>
-                  } @empty {
-                    <option value="">{{ t('access-empty') }}</option>
-                  }
-                </select>
-              </label>
-
-              <div class="mt-3 flex flex-col gap-2">
-                @for (chapter of m.chapters; track chapter.id) {
-                  <label
-                    class="flex items-center justify-between gap-3 rounded-md bg-input px-3 py-2"
+            <div
+              appDialogFocus
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="chapter-access-title"
+              class="flex max-h-[calc(100dvh-2rem)] w-full max-w-[520px] flex-col overflow-hidden rounded-xl bg-surface shadow-[0_8px_32px_#00000022]"
+            >
+              <div class="flex flex-col gap-3 px-6 py-5">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="flex items-center gap-2.5">
+                    <span
+                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#FEF3C7] text-[#D97706]"
+                      ><app-icon name="key" extra="h-[18px] w-[18px]"
+                    /></span>
+                    <div class="min-w-0">
+                      <h2
+                        id="chapter-access-title"
+                        class="font-heading text-[17px] font-bold text-text"
+                      >
+                        {{ t('access-chapter-title') }}
+                      </h2>
+                      <p class="mt-0.5 font-body text-xs text-text-muted">{{ m.course.title }}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    [disabled]="accessBusy()"
+                    [attr.aria-label]="t('access-close')"
+                    (click)="closeManage()"
+                    class="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-input text-text-secondary"
                   >
-                    <span class="font-body text-sm text-text">{{ chapter.title }}</span>
-                    <input
-                      type="checkbox"
-                      [disabled]="!studentId()"
-                      [checked]="isChapterOpen(chapter.id)"
-                      (change)="toggleChapter(chapter.id, $any($event.target).checked)"
-                      class="h-[18px] w-[18px] cursor-pointer rounded border-border accent-primary"
-                    />
-                  </label>
+                    <app-icon name="x" extra="h-4 w-4" />
+                  </button>
+                </div>
+                @if (choosingStudent()) {
+                  <app-student-picker
+                    [students]="studentList()"
+                    [selected]="studentId()"
+                    [disabled]="accessBusy() || accessLoading()"
+                    (selectedChange)="onStudentChange($event)"
+                  />
+                } @else if (currentStudent(); as student) {
+                  <div
+                    class="flex items-center gap-2 rounded-md bg-input px-3 py-2 font-body text-xs"
+                  >
+                    <app-icon name="user" extra="h-4 w-4 shrink-0 text-text-muted" />
+                    <span class="text-text-secondary">{{ t('access-student-bar') }}</span>
+                    <span
+                      class="min-w-0 flex-1 truncate font-semibold text-text"
+                      [title]="student.display_name + ' (' + student.login + ')'"
+                      >{{ student.display_name }} ({{ student.login }})</span
+                    >
+                    <button
+                      type="button"
+                      [disabled]="accessBusy() || accessLoading()"
+                      (click)="choosingStudent.set(true)"
+                      class="shrink-0 rounded-full border border-border px-2.5 py-1 text-[10px] text-text-secondary"
+                    >
+                      {{ t('access-change') }}
+                    </button>
+                  </div>
                 }
+              </div>
+              <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
+                @if (accessError()) {
+                  <p role="alert" class="mb-3 text-sm text-danger">{{ accessError() }}</p>
+                  <button
+                    type="button"
+                    [disabled]="accessBusy() || accessLoading()"
+                    (click)="onStudentChange(studentId())"
+                    class="mb-3 text-sm text-primary underline"
+                  >
+                    {{ t('access-retry') }}
+                  </button>
+                }
+                @if (!studentList().length) {
+                  <p class="font-body text-sm text-text-muted">{{ t('access-empty') }}</p>
+                } @else if (studentId() && !choosingStudent()) {
+                  <div class="flex flex-col gap-0.5">
+                    @for (chapter of m.chapters; track chapter.id) {
+                      <div
+                        class="flex items-center gap-3 rounded-sm px-3.5 py-3"
+                        [class.bg-[#F0FDF4]]="isChapterOpen(chapter.id)"
+                        [class.bg-[#FFFBEB]]="!isChapterOpen(chapter.id)"
+                      >
+                        <span
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] font-heading text-xs font-bold text-white"
+                          [class.bg-primary]="isChapterOpen(chapter.id)"
+                          [class.bg-[#D97706]]="!isChapterOpen(chapter.id)"
+                          >{{ $index + 1 }}</span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="font-body text-[13px] font-semibold text-text">{{
+                              chapter.title
+                            }}</span>
+                            <span
+                              class="rounded px-1.5 py-0.5 font-body text-[10px]"
+                              [class.bg-[#D1FAE5]]="isChapterOpen(chapter.id)"
+                              [class.text-primary]="isChapterOpen(chapter.id)"
+                              [class.bg-[#FEF3C7]]="!isChapterOpen(chapter.id)"
+                              [class.text-[#D97706]]="!isChapterOpen(chapter.id)"
+                              >{{
+                                isChapterOpen(chapter.id)
+                                  ? t('access-chapter-open-badge')
+                                  : t('access-chapter-closed-badge')
+                              }}</span
+                            >
+                          </div>
+                          <p class="mt-0.5 font-body text-[11px] text-text-muted">
+                            {{
+                              isChapterOpen(chapter.id)
+                                ? t('access-chapter-open-hint')
+                                : t('access-chapter-closed-hint')
+                            }}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          [attr.aria-label]="chapter.title"
+                          [attr.aria-checked]="isChapterOpen(chapter.id)"
+                          [disabled]="accessBusy() || accessLoading() || !!accessError()"
+                          (click)="toggleChapter(chapter.id, !isChapterOpen(chapter.id))"
+                          class="flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50"
+                          [class.bg-primary]="isChapterOpen(chapter.id)"
+                          [class.bg-border]="!isChapterOpen(chapter.id)"
+                        >
+                          <span
+                            class="h-5 w-5 rounded-full bg-white shadow-sm transition-transform"
+                            [class.translate-x-5]="isChapterOpen(chapter.id)"
+                          ></span>
+                        </button>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+              <div
+                class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-6 py-4"
+              >
+                <p
+                  role="status"
+                  class="flex items-center gap-1 font-body text-[11px] text-text-muted"
+                >
+                  <app-icon name="clock" extra="h-3 w-3" />{{
+                    accessBusy() ? t('access-saving') : t('access-saved-hint')
+                  }}
+                </p>
+                <div class="flex gap-3">
+                  @if (studentId()) {
+                    <button
+                      type="button"
+                      [disabled]="accessBusy() || accessLoading()"
+                      (click)="revokeAccess()"
+                      class="font-body text-xs text-danger disabled:opacity-50"
+                    >
+                      {{ t('access-revoke') }}
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    [disabled]="accessBusy()"
+                    (click)="closeManage()"
+                    class="font-body text-[13px] font-medium text-text-secondary"
+                  >
+                    {{ t('access-close') }}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -277,10 +401,14 @@ export class CourseDetailPage {
   readonly manageOpen = signal(false);
   readonly studentId = signal('');
   readonly studentList = signal<UserResponse[]>([]);
-  readonly studentName = computed(
-    () => this.studentList().find((student) => student.id === this.studentId())?.display_name ?? '',
-  );
   readonly openChapters = signal<string[]>([]);
+  readonly accessBusy = signal(false);
+  readonly accessLoading = signal(false);
+  readonly accessError = signal<string | null>(null);
+  readonly choosingStudent = signal(false);
+  readonly currentStudent = computed(() =>
+    this.studentList().find((s) => s.id === this.studentId()),
+  );
   private courseId = '';
 
   t(key: string, args?: Record<string, unknown>): string {
@@ -322,18 +450,33 @@ export class CourseDetailPage {
   }
 
   async openManage(): Promise<void> {
+    this.accessError.set(null);
+    this.choosingStudent.set(!this.studentId());
     this.manageOpen.set(true);
+    if (this.studentId()) await this.onStudentChange(this.studentId());
+  }
+
+  @HostListener('document:keydown.escape')
+  closeManage(): void {
+    if (!this.accessBusy()) this.manageOpen.set(false);
   }
 
   async onStudentChange(studentId: string): Promise<void> {
+    if (this.accessBusy()) return;
     this.studentId.set(studentId);
+    this.openChapters.set([]);
+    this.accessLoading.set(true);
+    this.accessError.set(null);
     try {
       const chapters = await this.api.studentChapters(this.courseId, studentId);
       if (this.studentId() === studentId) {
         this.openChapters.set(chapters.open_chapters);
+        this.choosingStudent.set(false);
       }
     } catch {
-      this.error.set(this.t('error-generic'));
+      if (this.studentId() === studentId) this.accessError.set(this.t('error-generic'));
+    } finally {
+      if (this.studentId() === studentId) this.accessLoading.set(false);
     }
   }
 
@@ -343,10 +486,12 @@ export class CourseDetailPage {
   }
 
   async toggleChapter(chapterId: string, open: boolean): Promise<void> {
-    if (!this.studentId()) {
+    if (!this.studentId() || this.accessBusy() || this.accessLoading()) {
       return;
     }
     try {
+      this.accessBusy.set(true);
+      this.accessError.set(null);
       const result = await this.api.setStudentChapter(
         this.courseId,
         this.studentId(),
@@ -355,7 +500,26 @@ export class CourseDetailPage {
       );
       this.openChapters.set(result.open_chapters);
     } catch {
-      this.error.set(this.t('error-generic'));
+      this.accessError.set(this.t('error-generic'));
+    } finally {
+      this.accessBusy.set(false);
+    }
+  }
+
+  async revokeAccess(): Promise<void> {
+    if (!this.studentId() || this.accessBusy() || this.accessLoading()) return;
+    this.accessBusy.set(true);
+    this.accessError.set(null);
+    try {
+      await this.api.revokeCourse(this.courseId, this.studentId());
+      this.studentList.update((students) => students.filter((s) => s.id !== this.studentId()));
+      this.studentId.set('');
+      this.openChapters.set([]);
+      this.choosingStudent.set(true);
+    } catch {
+      this.accessError.set(this.t('error-generic'));
+    } finally {
+      this.accessBusy.set(false);
     }
   }
 }

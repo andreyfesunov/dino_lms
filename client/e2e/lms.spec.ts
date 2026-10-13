@@ -39,8 +39,17 @@ test('fresh welcome, setup, users, grants, student onboarding and progress', asy
     .locator('app-courses button')
     .filter({ has: page.locator('app-icon[name="user-plus"]') })
     .click();
-  await page.locator('app-courses select').nth(0).selectOption(student.id);
-  await page.locator('app-courses select').nth(1).selectOption(course.id);
+  await page.getByRole('dialog').getByRole('searchbox').fill('student@example.test');
+  await page
+    .locator('app-student-picker button')
+    .filter({ hasText: 'student@example.test' })
+    .click();
+  await page.getByLabel('Course', { exact: true }).selectOption(course.id);
+  await page.getByRole('dialog').screenshot({ path: '../.run/design-review-grant-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('dialog').screenshot({ path: '../.run/design-review-grant-mobile.png' });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page
     .locator('app-courses button')
     .filter({ has: page.locator('app-icon[name="check-circle"]') })
@@ -49,10 +58,16 @@ test('fresh welcome, setup, users, grants, student onboarding and progress', asy
   const access = await (
     await page.request.get(`/api/courses/${course.id}/students/${student.id}/chapters`)
   ).json();
-  expect(access.open_chapters).toEqual(['*']);
+  const assignedDetail = await (await page.request.get(`/api/courses/${course.id}`)).json();
+  expect(access.open_chapters).toEqual(
+    assignedDetail.chapters
+      .filter((c: { open_by_default: boolean }) => c.open_by_default)
+      .map((c: { id: string }) => c.id),
+  );
 
   await page.goto('/users');
   await expect(page.locator('app-users')).toContainText('student@example.test');
+  await page.screenshot({ path: '../.run/design-review-users.png' });
   await page.goto('/settings');
   await expect(page.locator('[name="firstName"]')).toHaveValue('Admin');
   await page.reload();
@@ -198,10 +213,41 @@ test('settings translations, floating user actions and named access controls', a
   const { courses } = await (await page.request.get('/api/courses')).json();
   await page.goto(`/courses/${courses[0].id}`);
   await page.getByRole('button', { name: 'Manage access', exact: true }).click();
-  const studentSelect = page.locator('app-course-detail select');
-  await expect(studentSelect.locator('option')).toHaveText(['User Student']);
-  await expect(page.getByRole('heading', { name: 'Course access: User Student' })).toBeVisible();
-  await expect(studentSelect).not.toContainText(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+  const accessDialog = page.getByRole('dialog');
+  await expect(accessDialog).toContainText('User Student');
+  await expect(accessDialog.getByRole('heading', { name: 'Manage chapter access' })).toBeVisible();
+  await expect(accessDialog).not.toContainText(/[0-9a-f]{8}-[0-9a-f]{4}-/);
+  const chapterSwitch = accessDialog.getByRole('switch').first();
+  await expect(chapterSwitch).toHaveAttribute('aria-checked', 'true');
+  await chapterSwitch.click();
+  await expect(chapterSwitch).toHaveAttribute('aria-checked', 'false');
+  await expect(chapterSwitch).toBeEnabled();
+  await page.reload();
+  await page.getByRole('button', { name: 'Manage access', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('switch').first()).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
+  await page.getByRole('dialog').getByRole('switch').first().click();
+  await expect(page.getByRole('dialog').getByRole('switch').first()).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+  await page.getByRole('dialog').screenshot({ path: '../.run/design-review-chapters-desktop.png' });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole('dialog').screenshot({ path: '../.run/design-review-chapters-mobile.png' });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Manage access', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Change', exact: true }).click();
+  await page.getByRole('dialog').getByRole('searchbox').fill('student@example.test');
+  await expect(page.locator('app-student-picker button')).toHaveCount(1);
+  await page.locator('app-student-picker button').click();
+  await expect(page.getByRole('dialog').getByRole('switch').first()).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
 
   for (const width of [390, 767]) {
     await page.setViewportSize({ width, height: 844 });
@@ -279,7 +325,12 @@ test('call lesson availability, booking, changes, cancellation and completion', 
     return user;
   };
   const teacher = await createUser('callteacher@example.test', 'teacher');
-  await createUser('calllearner@example.test', 'student');
+  const learner = await createUser('calllearner@example.test', 'student');
+  expect(
+    (
+      await page.request.post(`/api/courses/zzz-call-practice/students/${learner.id}`, { data: {} })
+    ).ok(),
+  ).toBeTruthy();
   const path = '/courses/zzz-call-practice/practice/consultation';
   const apiPath = '/api' + path + '/calls';
   await page.goto(path);

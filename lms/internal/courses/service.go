@@ -38,7 +38,7 @@ type ChapterState string
 const (
 	// ChapterOpen means the user may read the chapter's lessons.
 	ChapterOpen ChapterState = "open"
-	// ChapterLocked hides the chapter behind an access request.
+	// ChapterLocked hides the chapter's lessons.
 	ChapterLocked ChapterState = "locked"
 )
 
@@ -70,6 +70,7 @@ type CourseRepository interface {
 	AccessList(ctx context.Context, userID kernel.UserID) ([]CourseAccess, error)
 	CourseStudents(ctx context.Context, courseID string) ([]kernel.UserID, error)
 	Grant(ctx context.Context, userID kernel.UserID, courseID string, openChapters []string, grantedBy kernel.UserID) error
+	Assign(ctx context.Context, userID kernel.UserID, courseID string, openChapters []string, grantedBy kernel.UserID) error
 	Revoke(ctx context.Context, userID kernel.UserID, courseID string) error
 	CompletedLessons(ctx context.Context, userID kernel.UserID, courseID string) ([]string, error)
 	MarkLessonDone(ctx context.Context, userID kernel.UserID, courseID, lessonKey string) error
@@ -102,8 +103,7 @@ func (s *CourseService) requireManage(actor kernel.Actor) error {
 }
 
 // VisibleCourses lists courses for the list page: admins/teachers see
-// everything (including archived); students see granted courses plus any
-// course with a chapter open by default.
+// everything (including archived); students see only assigned courses.
 func (s *CourseService) VisibleCourses(ctx context.Context, actor kernel.Actor) ([]CourseSummary, error) {
 	seeAll := s.seesAllCourses(actor)
 	var grants []CourseAccess
@@ -121,13 +121,7 @@ func (s *CourseService) VisibleCourses(ctx context.Context, actor kernel.Actor) 
 		if !seeAll {
 			granted := false
 			for _, grant := range grants {
-				if grant.CourseID == course.ID && len(grant.OpenChapters) > 0 {
-					granted = true
-					break
-				}
-			}
-			for _, chapter := range course.Chapters {
-				if chapter.OpenByDefault {
+				if grant.CourseID == course.ID {
 					granted = true
 					break
 				}
@@ -151,9 +145,9 @@ func (s *CourseService) VisibleCourses(ctx context.Context, actor kernel.Actor) 
 }
 
 // ChapterAccess tells whether the user may open the chapter: admins/teachers
-// always can, students need a grant, a wildcard or open_by_default.
+// always can; students need an explicitly granted chapter.
 func (s *CourseService) ChapterAccess(ctx context.Context, actor kernel.Actor, course *CourseConfig, chapter *ChapterConfig) (ChapterState, error) {
-	if s.seesAllCourses(actor) || chapter.OpenByDefault {
+	if s.seesAllCourses(actor) {
 		return ChapterOpen, nil
 	}
 	grant, err := s.repo.Access(ctx, actor.UserID, course.ID)
@@ -283,13 +277,46 @@ func (s *CourseService) MarkLessonUndone(ctx context.Context, actor kernel.Actor
 	return nil
 }
 
-// Grant adds or updates a course access grant. Admin-only.
-func (s *CourseService) Grant(ctx context.Context, actor kernel.Actor, userID kernel.UserID, courseID string, openChapters []string) error {
+// CheckCourseAccess requires a course assignment for students.
+func (s *CourseService) CheckCourseAccess(ctx context.Context, actor kernel.Actor, courseID string) error {
+	if s.seesAllCourses(actor) {
+		return nil
+	}
+	access, err := s.repo.Access(ctx, actor.UserID, courseID)
+	if err != nil {
+		return StorageError(err)
+	}
+	if access == nil {
+		return &CoursesError{Code: CodeForbidden, msg: "course is not assigned"}
+	}
+	return nil
+}
+
+// Assign enrolls a student with default chapters, preserving existing access.
+func (s *CourseService) Assign(ctx context.Context, actor kernel.Actor, userID kernel.UserID, courseID string) error {
 	if err := s.requireManage(actor); err != nil {
 		return err
 	}
-	if len(openChapters) == 0 {
-		return StorageErrorf("grant must include at least one chapter or `*`")
+	course := s.catalog.Get(courseID)
+	if course == nil {
+		return NotFoundError(CodeCourseNotFound, courseID)
+	}
+	ids := []string{}
+	for _, chapter := range course.Chapters {
+		if chapter.OpenByDefault {
+			ids = append(ids, chapter.ID)
+		}
+	}
+	if err := s.repo.Assign(ctx, userID, courseID, ids, actor.UserID); err != nil {
+		return StorageError(err)
+	}
+	return nil
+}
+
+// Grant adds or updates a course assignment, including one with no open chapters.
+func (s *CourseService) Grant(ctx context.Context, actor kernel.Actor, userID kernel.UserID, courseID string, openChapters []string) error {
+	if err := s.requireManage(actor); err != nil {
+		return err
 	}
 	course := s.catalog.Get(courseID)
 	if course == nil {
@@ -298,6 +325,13 @@ func (s *CourseService) Grant(ctx context.Context, actor kernel.Actor, userID ke
 	for _, id := range openChapters {
 		if id != "*" && course.Chapter(id) == nil {
 			return NotFoundError(CodeChapterNotFound, id)
+		}
+	}
+	// New grants snapshot chapter IDs; new chapters never become open implicitly.
+	if containsString(openChapters, "*") {
+		openChapters = []string{}
+		for _, chapter := range course.Chapters {
+			openChapters = append(openChapters, chapter.ID)
 		}
 	}
 	if err := s.repo.Grant(ctx, userID, courseID, openChapters, actor.UserID); err != nil {
@@ -467,12 +501,19 @@ SELECT user_id FROM course_access WHERE course_id = ? ORDER BY created_at`, cour
 	return users, rows.Err()
 }
 
+// Assign inserts an enrollment without overwriting an existing chapter selection.
+func (r *SqliteCourseRepository) Assign(ctx context.Context, userID kernel.UserID, courseID string, openChapters []string, grantedBy kernel.UserID) error {
+	_, err := r.pool.ExecContext(ctx, `
+INSERT INTO course_access (user_id, course_id, open_chapters, granted_by, created_at)
+VALUES (?, ?, ?, ?, strftime('%s','now'))
+ON CONFLICT (user_id, course_id) DO NOTHING`,
+		userID.String(), courseID, strings.Join(openChapters, ","), grantedBy.String())
+	return err
+}
+
 // Grant inserts or updates a grant.
 func (r *SqliteCourseRepository) Grant(ctx context.Context, userID kernel.UserID, courseID string, openChapters []string, grantedBy kernel.UserID) error {
 	joined := strings.Join(openChapters, ",")
-	if joined == "" {
-		joined = "*"
-	}
 	_, err := r.pool.ExecContext(ctx, `
 INSERT INTO course_access (user_id, course_id, open_chapters, granted_by, created_at)
 VALUES (?, ?, ?, ?, strftime('%s','now'))

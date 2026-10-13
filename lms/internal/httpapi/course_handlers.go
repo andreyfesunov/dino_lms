@@ -46,6 +46,7 @@ type courseListJSON struct {
 	Archived       bool    `json:"archived"`
 	EstimatedHours *string `json:"estimated_hours"`
 	TotalLessons   int     `json:"total_lessons"`
+	TotalChapters  int     `json:"total_chapters"`
 	Progress       int     `json:"progress"`
 	Students       int     `json:"students"`
 }
@@ -105,6 +106,7 @@ func (s *Server) handleCoursesList(w http.ResponseWriter, r *http.Request) {
 			Archived:       summary.Course.Archived,
 			EstimatedHours: summary.Course.EstimatedHours,
 			TotalLessons:   summary.Course.TotalLessons(),
+			TotalChapters:  len(summary.Course.Chapters),
 			Progress:       progress,
 			Students:       summary.Students,
 		})
@@ -126,6 +128,10 @@ func (s *Server) handleCourseDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := s.Courses.CheckCourseAccess(r.Context(), *actor, course.ID); err != nil {
+		writeError(w, err)
+		return
+	}
 	completed, err := s.Courses.CompletedLessons(r.Context(), *actor, course.ID)
 	if err != nil {
 		writeError(w, err)
@@ -140,6 +146,7 @@ func (s *Server) handleCourseDetail(w http.ResponseWriter, r *http.Request) {
 			Archived:       course.Archived,
 			EstimatedHours: course.EstimatedHours,
 			TotalLessons:   course.TotalLessons(),
+			TotalChapters:  len(course.Chapters),
 			Progress:       int(s.Courses.CourseProgress(course, completed)),
 		},
 		Chapters: []chapterJSON{},
@@ -404,6 +411,47 @@ type studentChaptersRequest struct {
 	Open      bool   `json:"open"`
 }
 
+// handleCourseAssignment assigns default chapters or revokes the entire course.
+func (s *Server) handleCourseAssignment(w http.ResponseWriter, r *http.Request) {
+	actor, _, ok := s.requirePermission(w, r, kernel.PermissionManageCourses)
+	if !ok {
+		return
+	}
+	studentID, ok := parseUserID(w, r.PathValue("user"))
+	if !ok {
+		return
+	}
+	student, err := s.Auth.GetUser(r.Context(), *actor, studentID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	if student.Role != kernel.RoleStudent {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "bad_request"})
+		return
+	}
+	courseID := r.PathValue("course")
+	if s.Catalog.Get(courseID) == nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"code": courses.CodeCourseNotFound})
+		return
+	}
+	if r.Method == http.MethodDelete {
+		err = s.Courses.Revoke(r.Context(), *actor, studentID, courseID)
+	} else {
+		err = s.Courses.Assign(r.Context(), *actor, studentID, courseID)
+	}
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	chapters, err := s.Courses.StudentChapters(r.Context(), *actor, studentID, courseID)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"open_chapters": chapters})
+}
+
 // handleStudentChapterAccess answers POST
 // /api/courses/{course}/students/{user}/chapters: toggles one chapter and
 // normalises the grant.
@@ -472,13 +520,7 @@ func (s *Server) handleStudentChapterAccess(w http.ResponseWriter, r *http.Reque
 		return posInList(chapterIDs, next[i]) < posInList(chapterIDs, next[j])
 	})
 
-	if len(next) == 0 {
-		err = s.Courses.Revoke(r.Context(), *actor, studentID, courseID)
-	} else if len(next) == len(chapterIDs) && allIn(next, chapterIDs) {
-		err = s.Courses.Grant(r.Context(), *actor, studentID, courseID, []string{"*"})
-	} else {
-		err = s.Courses.Grant(r.Context(), *actor, studentID, courseID, next)
-	}
+	err = s.Courses.Grant(r.Context(), *actor, studentID, courseID, next)
 	if err != nil {
 		writeError(w, err)
 		return
@@ -498,15 +540,6 @@ func posInList(list []string, value string) int {
 		}
 	}
 	return len(list)
-}
-
-func allIn(next, chapterIDs []string) bool {
-	for _, id := range chapterIDs {
-		if !containsString(next, id) {
-			return false
-		}
-	}
-	return true
 }
 
 // handleStudentChaptersGet answers GET

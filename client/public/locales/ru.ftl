@@ -305,3 +305,8 @@ calls-tab-history = История
 calls-tab-all = Все
 calls-refresh = Обновить
 calls-empty = Здесь пока нет звонков.
+
+access-default-hint = При назначении открываются только главы, доступные по умолчанию. Доступ к каждой главе можно изменить позже.
+access-no-matches = Студенты не найдены
+access-saving = Сохранение…
+access-retry = Повторить загрузку

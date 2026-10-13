@@ -1,11 +1,13 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { ApiService, ApiError } from '../../core/api.service';
+import { ApiService } from '../../core/api.service';
 import { CourseListItem, UserResponse } from '../../core/api.types';
 import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
+import { StudentPicker } from '../../shared/student-picker';
+import { DialogFocus } from '../../shared/dialog-focus';
 
 interface CourseRow {
   course: CourseListItem;
@@ -15,7 +17,7 @@ interface CourseRow {
 @Component({
   selector: 'app-courses',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon, RouterLink],
+  imports: [FormsModule, Icon, RouterLink, StudentPicker, DialogFocus],
   template: `
     <section
       class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
@@ -28,7 +30,7 @@ interface CourseRow {
         @if (session.isAdmin()) {
           <button
             type="button"
-            (click)="modal.set(1)"
+            (click)="openGrant()"
             class="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
           >
             <app-icon name="user-plus" extra="h-4 w-4 text-text-inverse" />
@@ -138,69 +140,82 @@ interface CourseRow {
 
       @if (modal() === 1 && session.isAdmin()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A28]/40 p-4">
-          <div class="w-full max-w-lg rounded-xl bg-surface p-6 shadow-xl">
-            <div class="mb-4 flex items-start justify-between gap-4">
-              <div>
-                <h2 class="font-heading text-xl font-semibold text-text">
-                  {{ t('access-grant-title') }}
-                </h2>
-                <p class="mt-1 font-body text-sm text-text-secondary">
-                  {{ t('access-grant-sub') }}
-                </p>
+          <div
+            appDialogFocus
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="grant-title"
+            (keydown.escape)="closeGrant()"
+            class="flex max-h-[calc(100dvh-2rem)] w-full max-w-[480px] flex-col overflow-hidden rounded-xl bg-surface shadow-[0_8px_32px_#00000022]"
+          >
+            <div class="flex items-start justify-between gap-3 px-6 py-5">
+              <div class="flex items-center gap-2.5">
+                <span
+                  class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary-soft text-primary"
+                  ><app-icon name="user-plus" extra="h-[18px] w-[18px]"
+                /></span>
+                <div>
+                  <h2 id="grant-title" class="font-heading text-[17px] font-bold text-text">
+                    {{ t('access-grant-title') }}
+                  </h2>
+                  <p class="mt-0.5 font-body text-xs text-text-muted">
+                    {{ t('access-grant-sub') }}
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
-                class="rounded-md p-1 text-text-secondary hover:bg-input"
-                (click)="modal.set(0)"
+                [disabled]="grantBusy()"
+                [attr.aria-label]="t('access-close')"
+                (click)="closeGrant()"
+                class="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-full bg-input text-text-secondary"
               >
-                <app-icon name="x" />
+                <app-icon name="x" extra="h-4 w-4" />
               </button>
             </div>
-            <div class="flex flex-col gap-3">
-              <label class="flex flex-col gap-1.5 font-body text-[13px] font-medium text-text">
-                {{ t('access-student-label') }}
-                <select
-                  [(ngModel)]="grantStudent"
-                  class="h-11 rounded-md border-0 bg-input px-3 font-body text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
-                >
-                  <option value="">{{ t('access-student-placeholder') }}</option>
-                  @for (student of students(); track student.id) {
-                    <option [value]="student.id">
-                      {{ student.display_name }} ({{ student.login }})
-                    </option>
-                  }
-                </select>
-              </label>
-              <label class="flex flex-col gap-1.5 font-body text-[13px] font-medium text-text">
+            <div class="flex flex-col gap-4 overflow-y-auto px-6 pb-5">
+              @if (grantError()) {
+                <p role="alert" class="text-sm text-danger">{{ grantError() }}</p>
+              }
+              <app-student-picker
+                [students]="students()"
+                [selected]="grantStudent()"
+                [disabled]="grantBusy()"
+                (selectedChange)="grantStudent.set($event)"
+              />
+              <label class="flex flex-col gap-1.5 font-body text-xs font-semibold text-text">
                 {{ t('access-course-label') }}
                 <select
                   [(ngModel)]="grantCourse"
-                  class="h-11 rounded-md border-0 bg-input px-3 font-body text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/30"
+                  [attr.aria-label]="t('access-course-label')"
+                  [disabled]="grantBusy()"
+                  class="h-10 rounded-md border border-border bg-surface px-3 text-[13px] font-normal focus:outline-none focus:ring-2 focus:ring-primary/30"
                 >
                   @for (course of allCourses(); track course.id) {
                     <option [value]="course.id">{{ course.title }}</option>
                   }
                 </select>
               </label>
-              <p class="font-body text-xs text-text-muted">
-                {{ t('access-chapters-label') }} — {{ t('access-chapters-all') }}
+              <p class="rounded-md bg-input px-3.5 py-3 font-body text-xs text-text-secondary">
+                {{ t('access-default-hint') }}
               </p>
             </div>
-            <div class="mt-5 flex justify-end gap-2">
+            <div class="flex justify-end gap-2.5 border-t border-border px-6 py-4">
               <button
                 type="button"
-                class="rounded-md bg-input px-4 py-2.5 font-body text-sm font-medium text-text hover:bg-border"
-                (click)="modal.set(0)"
+                [disabled]="grantBusy()"
+                (click)="closeGrant()"
+                class="rounded-md px-4 py-2 font-body text-[13px] font-medium text-text-secondary"
               >
                 {{ t('action-cancel') }}
               </button>
               <button
                 type="button"
-                class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
+                [disabled]="grantBusy() || !grantStudent() || !grantCourse()"
                 (click)="submitGrant()"
+                class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 font-body text-[13px] font-semibold text-text-inverse hover:bg-inverse disabled:opacity-50"
               >
-                <app-icon name="check-circle" extra="h-4 w-4 text-text-inverse" />
-                {{ t('access-grant-submit') }}
+                <app-icon name="check-circle" extra="h-4 w-4" />{{ t('access-grant-submit') }}
               </button>
             </div>
           </div>
@@ -221,9 +236,23 @@ export class CoursesPage {
   readonly students = signal<UserResponse[]>([]);
   readonly grantStudent = signal('');
   readonly grantCourse = signal('');
+  readonly grantBusy = signal(false);
+  readonly grantError = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
   private readonly loaded = signal<CourseListItem[]>([]);
+
+  openGrant(): void {
+    this.grantStudent.set('');
+    this.grantCourse.set(this.allCourses()[0]?.id ?? '');
+    this.grantError.set(null);
+    this.modal.set(1);
+  }
+
+  @HostListener('document:keydown.escape')
+  closeGrant(): void {
+    if (!this.grantBusy()) this.modal.set(0);
+  }
 
   rows(): CourseRow[] {
     const query = this.search().trim().toLowerCase();
@@ -260,6 +289,7 @@ export class CoursesPage {
   }
 
   async submitGrant(): Promise<void> {
+    if (this.grantBusy()) return;
     const student = this.grantStudent().trim();
     const course = this.grantCourse().trim();
     if (!student || !course) {
@@ -267,14 +297,15 @@ export class CoursesPage {
       return;
     }
     try {
-      const detail = await this.api.course(course);
-      for (const chapter of detail.chapters) {
-        await this.api.setStudentChapter(course, student, chapter.id, true);
-      }
+      this.grantBusy.set(true);
+      this.grantError.set(null);
+      await this.api.assignCourse(course, student);
       await this.ngOnInit();
       this.modal.set(0);
     } catch (e) {
-      this.error.set(this.t('error-generic'));
+      this.grantError.set(this.t('error-generic'));
+    } finally {
+      this.grantBusy.set(false);
     }
   }
 
@@ -303,7 +334,7 @@ export class CoursesPage {
   }
 
   chaptersLabel(row: CourseRow): string {
-    return this.t('courses-chapters-count', { count: row.course.total_lessons });
+    return this.t('courses-chapters-count', { count: row.course.total_chapters });
   }
 
   studentsLabel(count: number): string {

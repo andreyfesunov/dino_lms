@@ -6,7 +6,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -61,6 +60,13 @@ lessons=[{id="call",title="Consultation",type="call"}]
 		}
 	}
 	c := courses.NewCourseService(courses.OpenCatalog(f.root), courses.NewSqliteCourseRepository(pool))
+	for _, courseID := range []string{"sample", "other"} {
+		for _, student := range []kernel.Actor{f.student, f.second} {
+			if err := c.Assign(ctx, f.admin, student.UserID, courseID); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
 	f.s = New(pool, c)
 	now := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
 	f.s.now = func() time.Time { return now }
@@ -296,18 +302,11 @@ func TestSettingsValidationAndAccessRevocation(t *testing.T) {
 		code(t, err, "bad_request")
 	}
 	c := book(t, f, f.student, f.key, f.start)
-	// Remove public access, with no explicit student grant.
-	path := filepath.Join(f.root, "sample", "config.toml")
-	raw, err := os.ReadFile(path)
-	if err != nil {
+	// Revoke even though the chapter is open by default.
+	if err := f.s.courses.Revoke(ctx, f.admin, f.student.UserID, "sample"); err != nil {
 		t.Fatal(err)
 	}
-	raw = []byte(strings.ReplaceAll(string(raw), "open_by_default=true", "open_by_default=false"))
-	if err = os.WriteFile(path, raw, 0600); err != nil {
-		t.Fatal(err)
-	}
-	f.s.courses = courses.NewCourseService(courses.OpenCatalog(f.root), courses.NewSqliteCourseRepository(f.pool))
-	_, err = f.s.Slots(ctx, f.student, f.key, f.start, f.start+86400, "")
+	_, err := f.s.Slots(ctx, f.student, f.key, f.start, f.start+86400, "")
 	code(t, err, "forbidden")
 	_, err = f.s.Change(ctx, f.student, c.ID, Change{Action: "reschedule", Version: c.Version, StartsAt: f.start + 1800})
 	code(t, err, "forbidden")
