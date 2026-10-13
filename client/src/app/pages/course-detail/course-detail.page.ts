@@ -153,7 +153,9 @@ import { Icon } from '../../shared/icon';
                           : 'font-body text-xs text-[#D97706]'
                       "
                     >
-                      {{ t('course-lessons', { count: chapter.lessons.length }) }} ·
+                      @if (chapter.state === 'open') {
+                        {{ t('course-lessons', { count: chapter.lessons.length }) }} ·
+                      }
                       {{
                         chapter.state === 'open'
                           ? t('course-chapter-access-open')
@@ -172,12 +174,6 @@ import { Icon } from '../../shared/icon';
                     {{ t('course-chapter-open') }}
                     <app-icon name="chevron-right" extra="h-3.5 w-3.5" />
                   </a>
-                } @else if (chapter.state !== 'open') {
-                  <span
-                    class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 py-2 font-body text-xs font-medium text-text-secondary"
-                  >
-                    {{ t('course-chapter-request') }}
-                  </span>
                 }
               </div>
               <div class="mt-4 flex flex-col gap-2 border-t border-border pt-3">
