@@ -53,6 +53,30 @@ func TestListsAndGetsCourses(t *testing.T) {
 	}
 }
 
+func TestEmptyChapters(t *testing.T) {
+	for _, declaration := range []string{"", "lessons = []"} {
+		t.Run(declaration, func(t *testing.T) {
+			root := t.TempDir()
+			writeCourse(t, root, "draft", declaration)
+			catalog := OpenCatalog(root)
+			course := catalog.Get("draft")
+			if course == nil {
+				t.Fatal("course with an empty chapter must remain in the catalog")
+			}
+			service := NewCourseService(catalog, nil)
+			if course.TotalLessons() != 0 || len(course.LessonPairs()) != 0 {
+				t.Fatal("empty chapter must not create placeholder lessons")
+			}
+			if service.CourseProgress(course, nil) != 0 || service.ChapterProgress(&course.Chapters[0], nil) != 0 {
+				t.Fatal("empty course and chapter must have zero progress")
+			}
+			if course.Lesson("ch1", "intro") != nil {
+				t.Fatal("undeclared lesson must not be accessible")
+			}
+		})
+	}
+}
+
 func TestSkipsInvalidBundles(t *testing.T) {
 	root := t.TempDir()
 	if err := makeDirAll(filepath.Join(root, "broken")); err != nil {

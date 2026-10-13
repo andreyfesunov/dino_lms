@@ -172,7 +172,7 @@ import { Icon } from '../../shared/icon';
                     {{ t('course-chapter-open') }}
                     <app-icon name="chevron-right" extra="h-3.5 w-3.5" />
                   </a>
-                } @else {
+                } @else if (chapter.state !== 'open') {
                   <span
                     class="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border px-3.5 py-2 font-body text-xs font-medium text-text-secondary"
                   >
@@ -314,7 +314,7 @@ export class CourseDetailPage {
   }
 
   firstOpen(m: CourseDetail): string | null {
-    const chapter = m.chapters.find((c) => c.state === 'open');
+    const chapter = m.chapters.find((c) => c.state === 'open' && c.lessons.length > 0);
     if (!chapter) {
       return null;
     }

@@ -97,9 +97,6 @@ func (c *CourseConfig) validate(bundleDir string) error {
 		if strings.TrimSpace(chapter.Title) == "" {
 			return ConfigError(path, fmt.Sprintf("chapter `%s` title must not be empty", chapter.ID))
 		}
-		if len(chapter.Lessons) == 0 {
-			return ConfigError(path, fmt.Sprintf("chapter `%s` must declare at least one lesson", chapter.ID))
-		}
 		lessonIDs := map[string]bool{}
 		for _, lesson := range chapter.Lessons {
 			if lesson.Type != "" && lesson.Type != "article" && lesson.Type != "call" {
