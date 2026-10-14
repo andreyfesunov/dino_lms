@@ -21,7 +21,7 @@ import { Icon } from '../../shared/icon';
       <div class="welcome__overlay absolute inset-0" aria-hidden="true"></div>
 
       <div
-        class="relative z-10 flex min-h-screen flex-col justify-between px-6 py-10 md:px-16 md:py-14 xl:px-24 xl:py-[72px]"
+        class="relative z-10 flex min-h-screen flex-col justify-between px-6 pb-8 pt-10 md:px-16 md:py-14 xl:px-24 xl:py-[72px]"
       >
         <header class="welcome__brand flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
@@ -46,18 +46,22 @@ import { Icon } from '../../shared/icon';
           </div>
         </header>
 
-        <section class="welcome__hero flex w-full max-w-xl flex-col items-start gap-5 md:gap-6">
+        <section
+          class="welcome__hero flex w-full max-w-[640px] flex-col items-start gap-5 md:gap-6"
+        >
           <h1
             class="font-heading text-5xl font-semibold tracking-tight md:text-6xl xl:text-[72px] xl:tracking-[-0.02em]"
           >
             {{ t('brand-name') }}
           </h1>
           <p
-            class="whitespace-pre-line font-heading text-[22px] font-medium leading-snug text-primary-soft md:text-[28px]"
+            class="whitespace-pre-line font-heading text-[22px] font-medium leading-snug text-primary-soft md:text-[32px]"
           >
             {{ t('welcome-tagline') }}
           </p>
-          <p class="max-w-xl font-body text-base leading-normal text-text-inverse/80 md:text-lg">
+          <p
+            class="max-w-[640px] font-body text-base leading-normal text-text-inverse/80 md:text-lg"
+          >
             {{ t('welcome-desc') }}
           </p>
           <a

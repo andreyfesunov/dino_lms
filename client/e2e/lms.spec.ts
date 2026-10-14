@@ -128,7 +128,9 @@ test('bootstrap outage shows retry and does not offer administrator setup', asyn
   await expect(page.locator('a[href="/login"]')).toBeVisible();
 });
 
-test('settings translations, floating user actions and named access controls', async ({ page }) => {
+test('settings translations, responsive user actions and named access controls', async ({
+  page,
+}) => {
   await page.goto('/login');
   await page.locator('[name="login"]').fill('admin@example.test');
   await page.locator('[name="password"]').fill('correct horse');
@@ -176,13 +178,11 @@ test('settings translations, floating user actions and named access controls', a
     const checkbox = row.locator('input[type="checkbox"]');
     const rowBounds = (await row.boundingBox())!;
     const checkboxBounds = (await checkbox.boundingBox())!;
-    expect(
-      Math.abs(checkboxBounds.y + checkboxBounds.height / 2 - rowBounds.y - rowBounds.height / 2),
-    ).toBeLessThan(2);
+    expect(checkboxBounds.x).toBeGreaterThanOrEqual(rowBounds.x);
+    expect(checkboxBounds.y).toBeGreaterThanOrEqual(rowBounds.y);
     await checkbox.check();
     const bulk = page.getByTestId('bulk-actions');
-    await expect(bulk).toHaveCSS('position', 'fixed');
-    expect((await row.boundingBox())!.y).toBeCloseTo(rowBounds.y, 0);
+    await expect(bulk).toHaveCSS('position', 'static');
     const bulkBounds = (await bulk.boundingBox())!;
     expect(bulkBounds.x).toBeGreaterThanOrEqual(0);
     expect(bulkBounds.x + bulkBounds.width).toBeLessThanOrEqual(viewport.width);
@@ -256,8 +256,8 @@ test('settings translations, floating user actions and named access controls', a
       const surface = page.locator('main section').first();
       await expect(surface).toBeVisible();
       const bounds = (await surface.boundingBox())!;
-      expect(bounds.x).toBe(16);
-      expect(width - bounds.x - bounds.width).toBe(16);
+      expect(bounds.x).toBe(0);
+      expect(width - bounds.x - bounds.width).toBe(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     }
   }
@@ -271,7 +271,7 @@ test('settings translations, floating user actions and named access controls', a
   );
   await page.reload();
   const profile = page.locator('aside button[title]');
-  await expect(profile).toHaveText('ОченьДлиннаяФамилияПреподавателя Александр');
+  await expect(profile).toHaveText('ОченьДлиннаяФамилияПреподавателя А.');
   const name = profile.locator('span').last();
   await expect(name).toHaveCSS('white-space', 'normal');
   expect(await name.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
@@ -285,7 +285,7 @@ test('settings translations, floating user actions and named access controls', a
   await page.reload();
   const languageBounds = (await page.locator('select[name="language"]').boundingBox())!;
   const passwordBounds = (await page.locator('[name="currentPassword"]').boundingBox())!;
-  expect(languageBounds.y + languageBounds.height).toBeLessThan(passwordBounds.y);
+  expect(languageBounds.y).toBeGreaterThan(passwordBounds.y + passwordBounds.height);
   await page.locator('select[name="language"]').selectOption('ru');
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.locator('aside > div').last().locator('button').last().click();

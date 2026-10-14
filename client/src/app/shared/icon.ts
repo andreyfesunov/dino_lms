@@ -21,6 +21,7 @@ type IconName =
   | 'trash'
   | 'graduation-cap'
   | 'book-open'
+  | 'chevron-down'
   | 'chevron-right'
   | 'check-circle'
   | 'unlock'
@@ -32,6 +33,7 @@ type IconName =
   | 'user-plus';
 
 const PATHS: Record<IconName, string[]> = {
+  'chevron-down': ['m6 9 6 6 6-6'],
   'arrow-left': ['m12 19-7-7 7-7', 'M19 12H5'],
   'arrow-right': ['M5 12h14', 'm12 5 7 7-7 7'],
   plus: ['M5 12h14', 'M12 5v14'],

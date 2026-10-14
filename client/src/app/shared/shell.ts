@@ -9,7 +9,7 @@ import { Sidebar } from './sidebar';
   imports: [RouterOutlet, Sidebar],
   template: `
     @if (showShell()) {
-      <div class="flex min-h-screen gap-4 p-4 pb-24 md:pb-4">
+      <div class="design-shell">
         <app-sidebar class="contents md:block" />
         <main class="min-w-0 flex-1">
           <router-outlet />

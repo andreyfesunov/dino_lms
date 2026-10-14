@@ -27,7 +27,7 @@ export class DialogFocus {
   private controls(): HTMLElement[] {
     return Array.from(
       this.element.querySelectorAll<HTMLElement>(
-        'button:not(:disabled), input:not(:disabled), select:not(:disabled), [tabindex="0"]',
+        'button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex="0"]',
       ),
     ).filter((el) => el.getClientRects().length > 0);
   }

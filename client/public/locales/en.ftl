@@ -310,3 +310,12 @@ access-default-hint = Assignment opens only the default chapters. You can change
 access-no-matches = No students found
 access-saving = Saving…
 access-retry = Retry loading
+
+course-chapter-empty = Lessons are coming soon
+code-copy = Copy
+code-copied = Copied
+code-copy-error = Could not copy
+
+page-loading = Loading…
+list-empty = No results
+students-created = Student added

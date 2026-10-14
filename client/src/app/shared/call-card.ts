@@ -12,7 +12,7 @@ import { localCallInput, localCallTime } from './call-time';
   selector: 'app-call-card',
   imports: [FormsModule, CallSlots, RouterLink],
   template: `
-    <article class="flex flex-col gap-3 rounded-lg border border-border p-4">
+    <article class="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
       <div class="flex flex-wrap items-start justify-between gap-2">
         <div>
           <a
@@ -100,7 +100,7 @@ import { localCallInput, localCallTime } from './call-time';
           >{{ t('calls-link')
           }}<input
             type="url"
-            class="rounded-md bg-input p-3"
+            class="min-w-0 w-full rounded-md border border-border bg-input p-3"
             [(ngModel)]="url"
             placeholder="https://"
         /></label>
@@ -117,7 +117,10 @@ import { localCallInput, localCallTime } from './call-time';
         @if (manager()) {
           <label class="flex flex-col gap-1"
             >{{ t('calls-new-time') }} · {{ zone
-            }}<input type="datetime-local" class="rounded-md bg-input p-3" [(ngModel)]="start"
+            }}<input
+              type="datetime-local"
+              class="min-w-0 w-full rounded-md border border-border bg-input p-3"
+              [(ngModel)]="start"
           /></label>
           <button
             type="button"

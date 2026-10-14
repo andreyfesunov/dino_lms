@@ -75,6 +75,9 @@ export interface LessonResponse {
     thumbnail: string | null;
   }[];
   done: boolean;
+  chapter_index: number;
+  chapter_lesson_index: number;
+  chapter_total_lessons: number;
   index: number;
   total: number;
   prev: LessonNav | null;

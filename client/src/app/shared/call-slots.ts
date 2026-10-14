@@ -14,7 +14,7 @@ import { I18nService } from '../core/i18n.service';
         >{{ t('calls-date') }}
         <input
           type="date"
-          class="rounded-md bg-input p-3"
+          class="min-w-0 w-full rounded-md border border-border bg-input p-3"
           [min]="today"
           [ngModel]="day()"
           (ngModelChange)="day.set($event); load()"

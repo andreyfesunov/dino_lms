@@ -218,6 +218,18 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	chapterIndex, chapterLessonIndex := 0, 0
+	for ci := range course.Chapters {
+		if course.Chapters[ci].ID == chapterID {
+			chapterIndex = ci + 1
+		}
+	}
+	for li := range chapter.Lessons {
+		if chapter.Lessons[li].ID == lessonID {
+			chapterLessonIndex = li + 1
+		}
+	}
+
 	if lesson.Kind() == "call" {
 		completed, err := s.Courses.CompletedLessons(r.Context(), *actor, courseID)
 		if err != nil {
@@ -227,6 +239,7 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 		prev, next := s.Courses.LessonNeighbours(course, chapterID, lessonID)
 		ref := s.Courses.FindLesson(course, chapterID, lessonID)
 		writeJSON(w, http.StatusOK, map[string]any{
+			"chapter_index": chapterIndex, "chapter_lesson_index": chapterLessonIndex, "chapter_total_lessons": len(chapter.Lessons),
 			"type": "call", "course": map[string]string{"id": course.ID, "title": course.Title},
 			"chapter": map[string]string{"id": chapter.ID, "title": chapter.Title}, "id": lessonID, "title": lesson.Title,
 			"durationMin": lesson.DurationMin, "html": "", "videos": []mediaVideo{}, "youtube": []mediaYoutube{},
@@ -278,21 +291,24 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 		title = firstHeading(parsed.HTML)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"course":      map[string]any{"id": course.ID, "title": course.Title},
-		"type":        lesson.Kind(),
-		"chapter":     map[string]any{"id": chapter.ID, "title": chapter.Title},
-		"id":          lessonID,
-		"title":       title,
-		"durationMin": lesson.DurationMin,
-		"html":        parsed.HTML,
-		"videos":      videos,
-		"youtube":     youtube,
-		"done":        containsString(completed, courses.LessonKey(chapterID, lessonID)),
-		"index":       lessonIndex,
-		"total":       course.TotalLessons(),
-		"prev":        toNav(courseID, prev),
-		"next":        toNav(courseID, next),
-		"state":       string(state),
+		"course":                map[string]any{"id": course.ID, "title": course.Title},
+		"type":                  lesson.Kind(),
+		"chapter":               map[string]any{"id": chapter.ID, "title": chapter.Title},
+		"id":                    lessonID,
+		"title":                 title,
+		"durationMin":           lesson.DurationMin,
+		"html":                  parsed.HTML,
+		"videos":                videos,
+		"youtube":               youtube,
+		"done":                  containsString(completed, courses.LessonKey(chapterID, lessonID)),
+		"chapter_index":         chapterIndex,
+		"chapter_lesson_index":  chapterLessonIndex,
+		"chapter_total_lessons": len(chapter.Lessons),
+		"index":                 lessonIndex,
+		"total":                 course.TotalLessons(),
+		"prev":                  toNav(courseID, prev),
+		"next":                  toNav(courseID, next),
+		"state":                 string(state),
 	})
 }
 

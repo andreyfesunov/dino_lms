@@ -10,9 +10,7 @@ import { Icon } from '../../shared/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, Icon, RouterLink],
   template: `
-    <section
-      class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
-    >
+    <section class="design-page">
       <div class="flex items-center justify-between gap-4">
         <a
           routerLink="/users"
@@ -41,7 +39,7 @@ import { Icon } from '../../shared/icon';
             required
             [placeholder]="t('students-login-placeholder')"
             [(ngModel)]="login"
-            class="h-12 w-full rounded-md border border-border bg-input px-4 font-body text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none"
+            class="h-11 w-full rounded-md border border-border bg-input px-4 font-body text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none"
           />
         </label>
 
@@ -51,10 +49,12 @@ import { Icon } from '../../shared/icon';
             name="password"
             [placeholder]="t('students-password-placeholder')"
             [(ngModel)]="password"
-            class="h-12 w-full rounded-md border border-border bg-input px-4 font-body text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none"
+            class="h-11 w-full rounded-md border border-border bg-input px-4 font-body text-sm text-text placeholder:text-text-muted focus:border-primary focus:outline-none"
           />
         </label>
 
+        @if (error()) { <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p> }
+        @if (created()) { <p role="status" class="text-sm text-primary">{{ t('students-created') }}</p> }
         @if (temporaryPassword(); as pwd) {
           <div class="flex items-center justify-between gap-3 rounded-md bg-inverse px-4 py-3">
             <code class="font-mono text-sm text-text-inverse">{{ pwd }}</code>
@@ -93,6 +93,8 @@ export class CreateStudentPage {
   private api = inject(ApiService);
   private i18n = inject(I18nService);
 
+  readonly error = signal<string | null>(null);
+  readonly created = signal(false);
   readonly login = signal('');
   readonly password = signal('');
   readonly temporaryPassword = signal('');
@@ -107,6 +109,9 @@ export class CreateStudentPage {
       return;
     }
     this.busy.set(true);
+    this.error.set(null);
+    this.created.set(false);
+    this.temporaryPassword.set('');
     try {
       const password = this.password().trim();
       const result = await this.api.createStudent(
@@ -114,7 +119,8 @@ export class CreateStudentPage {
         password ? password : undefined,
       );
       this.temporaryPassword.set(result.temporary_password ?? '');
-    } finally {
+      this.created.set(true);
+    } catch { this.error.set(this.t('error-generic')); } finally {
       this.busy.set(false);
     }
   }

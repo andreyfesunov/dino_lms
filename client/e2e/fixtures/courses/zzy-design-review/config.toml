@@ -1,0 +1,17 @@
+id = "zzy-design-review"
+title = "Современный Frontend: полный цикл разработки приложений"
+description = "Тестовый курс для проверки длинных названий, пустых и закрытых глав, материалов занятия и индивидуальных созвонов."
+[[chapters]]
+id = "intro"
+title = "О платформе и организации обучения"
+open_by_default = true
+lessons = [{id = "overview", title = "Как устроен курс", duration_min = 25}, {id = "consultation", title = "Индивидуальный созвон", type = "call"}]
+[[chapters]]
+id = "empty"
+title = "От идеи до релиза"
+open_by_default = true
+lessons = []
+[[chapters]]
+id = "locked"
+title = "TypeScript и разработка больших приложений"
+lessons = [{id = "advanced", title = "Типы и интерфейсы"}]

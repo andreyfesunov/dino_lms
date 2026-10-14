@@ -19,28 +19,28 @@ interface CourseRow {
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, Icon, RouterLink, StudentPicker, DialogFocus],
   template: `
-    <section
-      class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
-    >
+    <section class="design-page">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div class="flex flex-col gap-1">
-          <h1 class="font-heading text-3xl font-semibold text-text">{{ t('courses-title') }}</h1>
+          <h1 class="font-heading text-2xl font-bold text-text md:text-[28px]">
+            {{ t('courses-title') }}
+          </h1>
           <p class="font-body text-sm text-text-secondary">{{ t('courses-subtitle') }}</p>
         </div>
         @if (session.isAdmin()) {
           <button
             type="button"
             (click)="openGrant()"
-            class="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
+            class="inline-flex items-center justify-center gap-2 rounded-md border border-border px-4 py-2.5 font-body text-sm font-medium text-text-secondary hover:bg-input"
           >
-            <app-icon name="user-plus" extra="h-4 w-4 text-text-inverse" />
+            <app-icon name="user-plus" extra="h-4 w-4" />
             <span>{{ t('courses-grant-access') }}</span>
           </button>
         }
       </div>
 
-      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <label class="relative block w-full max-w-md">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <label class="relative block w-full lg:w-[280px]">
           <span
             class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
           >
@@ -50,7 +50,7 @@ interface CourseRow {
             type="search"
             [placeholder]="t('courses-search-placeholder')"
             [(ngModel)]="search"
-            class="h-11 w-full rounded-md border-0 bg-input py-2.5 pl-10 pr-3 font-body text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
+            class="h-[37px] w-full rounded-md border-0 bg-input py-2.5 pl-10 pr-3 font-body text-sm text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </label>
         <div class="flex flex-wrap gap-2">
@@ -66,7 +66,7 @@ interface CourseRow {
         </div>
       </div>
 
-      @if (rows().length === 0) {
+      @if (!loading() && !error() && rows().length === 0) {
         <div
           class="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border py-16 text-center"
         >
@@ -76,16 +76,18 @@ interface CourseRow {
         </div>
       }
 
-      <div class="flex flex-col gap-4">
+      @if (loading()) { <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p> }
+      @if (error()) { <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p> }
+      <div class="grid grid-cols-1 gap-4">
         @for (row of rows(); track row.course.id) {
           <a
             [routerLink]="'/courses/' + row.course.id"
-            class="group block rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-input/40"
+            class="course-card group flex min-w-0 flex-col justify-between rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-input/40"
           >
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
-                  <h2 class="font-heading text-lg font-semibold text-text group-hover:text-primary">
+                  <h2 class="font-heading text-lg font-bold text-text group-hover:text-primary">
                     {{ row.course.title }}
                   </h2>
                   <span
@@ -97,7 +99,9 @@ interface CourseRow {
                   </span>
                 </div>
                 @if (row.course.description) {
-                  <p class="mt-1 line-clamp-2 font-body text-[13px] text-text-secondary">
+                  <p
+                    class="mt-1 max-w-[600px] line-clamp-2 font-body text-[13px] text-text-secondary"
+                  >
                     {{ row.course.description }}
                   </p>
                 }
@@ -229,6 +233,7 @@ export class CoursesPage {
   private api = inject(ApiService);
   private i18n = inject(I18nService);
 
+  readonly loading = signal(true);
   readonly search = signal('');
   readonly filter = signal<0 | 1 | 2>(0); // 0 all, 1 active, 2 archived
   readonly modal = signal(0);
@@ -275,6 +280,8 @@ export class CoursesPage {
   }
 
   async ngOnInit(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
     try {
       const result = await this.api.courses();
       this.loaded.set(result.courses);
@@ -285,7 +292,7 @@ export class CoursesPage {
       }
     } catch {
       this.error.set(this.t('error-generic'));
-    }
+    } finally { this.loading.set(false); }
   }
 
   async submitGrant(): Promise<void> {

@@ -11,9 +11,9 @@ import { DinoLogo } from '../../shared/dino-logo';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, DinoLogo],
   template: `
-    <div class="flex min-h-screen flex-col bg-bg xl:flex-row">
+    <div class="auth-page flex min-h-screen flex-col bg-surface xl:flex-row">
       <aside
-        class="hidden w-[560px] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse xl:flex"
+        class="hidden w-[38.8889%] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse xl:flex"
       >
         <div class="flex items-center gap-3">
           <app-dino-logo sizeClass="h-12 w-12 rounded-[14px]" />
@@ -41,7 +41,7 @@ import { DinoLogo } from '../../shared/dino-logo';
         </p>
       </div>
       <section
-        class="relative flex flex-1 flex-col items-center justify-center bg-surface px-6 py-8 md:px-16 md:py-12"
+        class="relative flex flex-1 flex-col items-center justify-center bg-surface px-6 py-12 md:justify-start md:px-16 md:py-12 xl:justify-center xl:py-16"
       >
         <div
           class="absolute right-4 top-4 flex items-center gap-1 text-sm text-text-muted md:right-6 md:top-6"
@@ -91,7 +91,7 @@ import { DinoLogo } from '../../shared/dino-logo';
                   autocomplete="username"
                   [placeholder]="t('login-placeholder')"
                   [(ngModel)]="login"
-                  class="h-12 w-full rounded-md border border-border bg-input px-4 font-body text-sm text-text shadow-none placeholder:text-text-muted focus:border-primary focus:outline-none"
+                  class="h-11 w-full rounded-md border border-border bg-input px-4 font-body text-sm text-text shadow-none placeholder:text-text-muted focus:border-primary focus:outline-none"
                 />
               </label>
 
@@ -105,7 +105,7 @@ import { DinoLogo } from '../../shared/dino-logo';
                     autocomplete="current-password"
                     placeholder="••••••••"
                     [(ngModel)]="password"
-                    class="h-12 w-full rounded-md border border-border bg-input py-3.5 pl-4 pr-12 font-body text-sm text-text shadow-none placeholder:text-text-muted focus:border-primary focus:outline-none"
+                    class="h-11 w-full rounded-md border border-border bg-input py-3.5 pl-4 pr-12 font-body text-sm text-text shadow-none placeholder:text-text-muted focus:border-primary focus:outline-none"
                   />
                   <button
                     type="button"

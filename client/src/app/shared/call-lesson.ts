@@ -23,7 +23,7 @@ import { localCallInput, localCallTime } from './call-time';
         </p>
         @if (session.isAdmin() || cfg.can_manage) {
           <details
-            class="rounded-lg border border-border p-4"
+            class="rounded-lg border border-border bg-surface p-4"
             [open]="expanded()"
             (toggle)="expanded.set($any($event.target).open)"
           >
@@ -33,7 +33,7 @@ import { localCallInput, localCallTime } from './call-time';
                 <label class="flex flex-col gap-1"
                   >{{ t('calls-teacher') }}
                   <select
-                    class="rounded-md bg-input p-3"
+                    class="min-w-0 w-full rounded-md border border-border bg-input p-3"
                     [(ngModel)]="cfg.teacher_id"
                     [attr.aria-label]="t('calls-teacher')"
                     (ngModelChange)="cfg.windows = []; saved.set(false)"
@@ -52,14 +52,14 @@ import { localCallInput, localCallTime } from './call-time';
                     type="number"
                     min="5"
                     max="480"
-                    class="rounded-md bg-input p-3"
+                    class="min-w-0 w-full rounded-md border border-border bg-input p-3"
                     [(ngModel)]="cfg.duration_min"
                     (ngModelChange)="saved.set(false)"
                 /></label>
                 <label class="flex flex-col gap-1"
                   >{{ t('calls-timezone')
                   }}<select
-                    class="rounded-md bg-input p-3"
+                    class="min-w-0 w-full rounded-md border border-border bg-input p-3"
                     [attr.aria-label]="t('calls-timezone')"
                     [(ngModel)]="cfg.timezone"
                     (ngModelChange)="saved.set(false)"
@@ -102,14 +102,14 @@ import { localCallInput, localCallTime } from './call-time';
                     >{{ t('calls-start')
                     }}<input
                       type="datetime-local"
-                      class="rounded-md bg-input p-3"
+                      class="min-w-0 w-full rounded-md border border-border bg-input p-3"
                       [(ngModel)]="windowStart"
                   /></label>
                   <label class="flex flex-col gap-1 text-sm"
                     >{{ t('calls-end')
                     }}<input
                       type="datetime-local"
-                      class="rounded-md bg-input p-3"
+                      class="min-w-0 w-full rounded-md border border-border bg-input p-3"
                       [(ngModel)]="windowEnd"
                   /></label>
                 </div>

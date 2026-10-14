@@ -6,20 +6,20 @@ import { LessonResponse } from '../../core/api.types';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
 import { CallLesson } from '../../shared/call-lesson';
+import { CodeBlocks } from '../../shared/code-blocks';
 
 @Component({
   selector: 'app-lesson',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, CallLesson, RouterLink],
+  imports: [Icon, CallLesson, RouterLink, CodeBlocks],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
     }
+    @if (loading()) { <section class="design-page"><p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p></section> }
     @if (lesson(); as l) {
-      <section
-        class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-5 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
-      >
-        <div class="flex items-center justify-between gap-4">
+      <section class="design-page lesson-page">
+        <div class="lesson-breadcrumb flex items-center justify-between gap-4 md:hidden">
           <a
             [routerLink]="'/courses/' + l.course.id"
             class="inline-flex items-center gap-2 font-body text-[13px] text-text-secondary hover:text-text"
@@ -38,8 +38,18 @@ import { CallLesson } from '../../shared/call-lesson';
         </div>
 
         <div class="flex flex-col gap-2">
-          <h1 class="font-heading text-[26px] font-semibold text-text">{{ l.title }}</h1>
-          <p class="font-body text-[13px] text-text-muted">{{ meta() }}</p>
+          <h1 class="font-heading text-[26px] font-bold text-text">{{ l.title }}</h1>
+          <div class="flex flex-wrap items-center gap-3">
+            <p class="font-body text-[13px] text-text-muted">{{ meta() }}</p>
+            @if (done()) {
+              <span
+                class="hidden items-center gap-1.5 rounded-full bg-[#D1FAE5] px-3 py-1 text-[11px] text-[#059669] md:inline-flex"
+                ><app-icon name="check-circle" extra="h-3.5 w-3.5" />{{
+                  t('lesson-done-badge')
+                }}</span
+              >
+            }
+          </div>
         </div>
 
         <div class="h-px bg-border"></div>
@@ -49,12 +59,17 @@ import { CallLesson } from '../../shared/call-lesson';
             [key]="{ course_id: l.course.id, chapter_id: l.chapter.id, lesson_id: l.id }"
           />
         } @else {
-          <div class="md-body flex flex-col" [innerHTML]="l.html"></div>
+          <div
+            class="md-body"
+            [appCodeBlocks]="l.html"
+            [articleTitle]="l.title"
+            [innerHTML]="l.html"
+          ></div>
         }
 
         @if (l.videos.length > 0) {
           <div class="flex flex-col gap-3">
-            <h2 class="flex items-center gap-2 font-heading text-[17px] font-semibold text-text">
+            <h2 class="flex items-center gap-2 font-heading text-[17px] font-bold text-text">
               <app-icon name="circle-play" extra="h-[18px] w-[18px] text-primary" />
               {{ t('lesson-video-title') }}
             </h2>
@@ -76,7 +91,7 @@ import { CallLesson } from '../../shared/call-lesson';
 
         @if (l.youtube.length > 0) {
           <div class="flex flex-col gap-3">
-            <h2 class="flex items-center gap-2 font-heading text-[17px] font-semibold text-text">
+            <h2 class="flex items-center gap-2 font-heading text-[17px] font-bold text-text">
               <app-icon name="external-link" extra="h-[18px] w-[18px] text-text-secondary" />
               {{ t('lesson-links-title') }}
             </h2>
@@ -88,7 +103,7 @@ import { CallLesson } from '../../shared/call-lesson';
                 class="group flex items-stretch gap-4 rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/40"
               >
                 <span
-                  class="relative block h-[84px] w-[150px] shrink-0 overflow-hidden rounded-md bg-input"
+                  class="relative block h-[60px] w-[100px] sm:h-[84px] sm:w-[150px] shrink-0 overflow-hidden rounded-md bg-input"
                 >
                   @if (link.thumbnail) {
                     <img
@@ -132,7 +147,7 @@ import { CallLesson } from '../../shared/call-lesson';
 
         <div class="h-px bg-border"></div>
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="lesson-actions flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2">
             @if (l.prev; as prev) {
               <a
@@ -183,6 +198,7 @@ export class LessonPage {
 
   readonly lesson = signal<LessonResponse | null>(null);
   readonly done = signal(false);
+  readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
   private routeIds = { course: '', chapter: '', lesson: '' };
@@ -193,21 +209,23 @@ export class LessonPage {
   }
 
   ngOnInit(): void {
-    this.activatedRoute.paramMap
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((params) => {
-        this.routeIds = {
-          course: params.get('courseId') ?? '',
-          chapter: params.get('chapterId') ?? '',
-          lesson: params.get('lessonId') ?? '',
-        };
-        void this.loadLesson();
-      });
+    this.activatedRoute.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+      this.routeIds = {
+        course: params.get('courseId') ?? '',
+        chapter: params.get('chapterId') ?? '',
+        lesson: params.get('lessonId') ?? '',
+      };
+      void this.loadLesson();
+    });
   }
 
   private async loadLesson(): Promise<void> {
     const generation = ++this.loadGeneration;
+    this.loading.set(true);
+    this.lesson.set(null);
+    this.done.set(false);
     try {
+      this.error.set(null);
       const lesson = await this.api.lesson(
         this.routeIds.course,
         this.routeIds.chapter,
@@ -218,7 +236,7 @@ export class LessonPage {
       this.done.set(lesson.done);
     } catch {
       if (generation === this.loadGeneration) this.error.set(this.t('error-generic'));
-    }
+    } finally { if (generation === this.loadGeneration) this.loading.set(false); }
   }
 
   meta(): string {
@@ -226,19 +244,19 @@ export class LessonPage {
     if (!l) {
       return '';
     }
-    const current = l.index + 1;
+    const current = l.chapter_lesson_index;
     if (l.durationMin != null) {
       return this.t('lesson-meta', {
-        chapter: l.chapter.title,
+        chapter: l.chapter_index,
         current,
-        total: l.total,
+        total: l.chapter_total_lessons,
         minutes: l.durationMin,
       });
     }
     return this.t('lesson-meta-simple', {
-      chapter: l.chapter.title,
+      chapter: l.chapter_index,
       current,
-      total: l.total,
+      total: l.chapter_total_lessons,
     });
   }
 

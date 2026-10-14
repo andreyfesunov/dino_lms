@@ -14,7 +14,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
   template: `
     @if (session.signedIn()) {
       <aside
-        class="hidden h-[calc(100vh-2rem)] w-[72px] shrink-0 flex-col justify-between rounded-xl bg-surface p-3 shadow-[0_4px_24px_rgba(27,58,40,0.08)] md:flex lg:w-[220px] lg:p-4"
+        class="sticky top-4 hidden h-[calc(100dvh-2rem)] w-[68px] shrink-0 flex-col justify-between rounded-xl bg-surface px-3 py-4 md:flex lg:w-[220px]"
       >
         <div class="flex flex-col gap-1">
           @if (canGoBack()) {
@@ -81,7 +81,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
 
         <div class="flex flex-col gap-1">
           <div [class]="menuClass()">
-            <div class="profile-menu__panel">
+            <div class="profile-menu__panel profile-menu--always">
               <div class="profile-menu__inner flex flex-col gap-1">
                 <a
                   routerLink="/settings"
@@ -131,14 +131,14 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             <span
               class="hidden min-w-0 flex-1 whitespace-normal break-words font-body text-sm font-medium leading-snug text-text lg:block"
             >
-              {{ session.user()?.display_name }}
+              {{ session.user()?.short_name || session.user()?.display_name }}
             </span>
           </button>
         </div>
       </aside>
 
       <nav
-        class="fixed inset-x-0 bottom-0 z-40 flex items-end justify-between gap-1 border-t border-border bg-surface px-3 pb-3 pt-2 md:hidden"
+        class="design-bottom-nav fixed inset-x-0 bottom-0 z-40 flex items-center justify-between gap-1 border-t border-border bg-surface px-4 pt-2 md:hidden"
       >
         <a
           routerLink="/courses"
@@ -146,14 +146,14 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           [class]="isActive('courses') ? 'text-primary' : 'text-text-secondary'"
         >
           <app-icon name="graduation-cap" extra="h-5 w-5" />
-          <span class="font-body text-[11px]">{{ t('nav-courses') }}</span>
+          <span class="font-body text-[12px]">{{ t('nav-courses') }}</span>
         </a>
         <a
           routerLink="/calls"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('calls') ? 'text-primary' : 'text-text-secondary'"
         >
-          <app-icon name="clock" extra="h-5 w-5" /><span class="font-body text-[11px]">{{
+          <app-icon name="clock" extra="h-5 w-5" /><span class="font-body text-[12px]">{{
             t('nav-calls')
           }}</span>
         </a>
@@ -164,7 +164,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             [class]="isActive('users') ? 'text-primary' : 'text-text-secondary'"
           >
             <app-icon name="users" extra="h-5 w-5" />
-            <span class="font-body text-[11px]">{{ t('nav-people') }}</span>
+            <span class="font-body text-[12px]">{{ t('nav-people') }}</span>
           </a>
         }
         <a
@@ -173,7 +173,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           [class]="isActive('settings') ? 'text-primary' : 'text-text-secondary'"
         >
           <app-icon name="more-horizontal" extra="h-5 w-5" />
-          <span class="font-body text-[11px]">{{ t('nav-more') }}</span>
+          <span class="font-body text-[12px]">{{ t('nav-more') }}</span>
         </a>
       </nav>
     }

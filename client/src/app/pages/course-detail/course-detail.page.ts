@@ -23,195 +23,205 @@ import { DialogFocus } from '../../shared/dialog-focus';
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
     }
+    @if (!model() && !error()) { <section class="design-page"><p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p></section> }
     @if (model(); as m) {
-      <section
-        class="flex h-full min-h-[calc(100vh-2rem)] flex-col gap-6 rounded-xl bg-surface p-5 shadow-[0_4px_24px_rgba(27,58,40,0.06)] md:p-8"
-      >
-        <div class="flex items-center justify-between gap-4">
-          <a
-            routerLink="/courses"
-            class="inline-flex items-center gap-2 font-body text-[13px] text-text-secondary hover:text-text"
-          >
-            <app-icon name="arrow-left" extra="h-4 w-4" />
-            {{ t('course-back') }}
-          </a>
-          @if (session.isAdmin()) {
-            <button
-              type="button"
-              (click)="openManage()"
-              class="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 font-body text-xs font-medium text-text-secondary hover:bg-input"
+      <section class="design-page course-detail">
+        <div class="course-header flex flex-col gap-5">
+          <div class="flex items-center justify-between gap-4">
+            <a
+              routerLink="/courses"
+              class="inline-flex items-center gap-2 font-body text-[13px] text-text-secondary hover:text-text"
             >
-              <app-icon name="key" extra="h-3.5 w-3.5" />
-              {{ t('course-manage-access') }}
-            </button>
-          }
-        </div>
+              <app-icon name="arrow-left" extra="h-4 w-4" />
+              {{ t('course-back') }}
+            </a>
+          </div>
 
-        <div class="flex flex-col gap-3">
-          <div class="flex flex-wrap items-center gap-3">
-            <h1 class="font-heading text-[26px] font-semibold text-text">
-              {{ m.course.title }}
-            </h1>
-            <span
-              class="inline-flex items-center gap-1 rounded bg-primary-soft px-2 py-0.5 font-body text-[11px] font-semibold text-primary"
-            >
-              <app-icon name="unlock" extra="h-3 w-3" />
-              {{ t('course-open-for-you') }}
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <h1 class="font-heading text-[26px] font-bold text-text">
+                {{ m.course.title }}
+              </h1>
+              <span
+                class="inline-flex items-center gap-1 rounded bg-primary-soft px-2 py-0.5 font-body text-[11px] font-semibold text-primary"
+              >
+                <app-icon name="unlock" extra="h-3 w-3" />
+                {{ t('course-open-for-you') }}
+              </span>
+            </div>
+            @if (m.course.description) {
+              <p class="course-description max-w-3xl font-body text-sm text-text-secondary">
+                {{ m.course.description }}
+              </p>
+            }
+            <div class="flex flex-wrap items-center gap-4 text-text-muted">
+              <span class="flex items-center gap-1.5 font-body text-[13px]">
+                <app-icon name="book-open" extra="h-4 w-4" />
+                {{ t('course-chapters', { count: m.chapters.length }) }}
+              </span>
+              <span class="flex items-center gap-1.5 font-body text-[13px]">
+                <app-icon name="file-text" extra="h-4 w-4" />
+                {{ t('course-lessons', { count: m.course.total_lessons }) }}
+              </span>
+              @if (m.course.estimated_hours; as hours) {
+                <span class="flex items-center gap-1.5 font-body text-[13px]">
+                  <app-icon name="clock" extra="h-4 w-4" />
+                  {{ t('course-hours', { hours }) }}
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-body text-xs text-text-muted">
+                {{ t('course-your-progress') }}
+              </span>
+              <span class="font-body text-[13px] font-semibold text-primary">
+                {{ t('course-progress-done', { percent: m.course.progress }) }}
+              </span>
+            </div>
+            <span class="inline-block h-2 w-full overflow-hidden rounded bg-input">
+              <span
+                class="block h-full rounded bg-primary"
+                [style.width.%]="m.course.progress"
+              ></span>
             </span>
           </div>
-          @if (m.course.description) {
-            <p class="max-w-3xl font-body text-sm text-text-secondary">
-              {{ m.course.description }}
-            </p>
-          }
-          <div class="flex flex-wrap items-center gap-4 text-text-muted">
-            <span class="flex items-center gap-1.5 font-body text-[13px]">
-              <app-icon name="book-open" extra="h-4 w-4" />
-              {{ t('course-chapters', { count: m.chapters.length }) }}
-            </span>
-            <span class="flex items-center gap-1.5 font-body text-[13px]">
-              <app-icon name="file-text" extra="h-4 w-4" />
-              {{ t('course-lessons', { count: m.course.total_lessons }) }}
-            </span>
-            @if (m.course.estimated_hours; as hours) {
-              <span class="flex items-center gap-1.5 font-body text-[13px]">
-                <app-icon name="clock" extra="h-4 w-4" />
-                {{ t('course-hours', { hours }) }}
-              </span>
+        </div>
+        <div class="course-chapters flex flex-col gap-3">
+          <div class="chapter-section-heading flex flex-wrap items-center justify-between gap-3">
+            <h2 class="font-heading text-lg font-bold text-text">
+              {{ t('course-chapters-title') }}
+            </h2>
+            @if (session.isAdmin()) {
+              <button
+                type="button"
+                (click)="openManage()"
+                [attr.aria-label]="t('course-manage-access')"
+                class="inline-flex items-center gap-2 rounded-md border border-border px-3.5 py-2 font-body text-xs font-medium text-text-secondary hover:bg-input"
+              >
+                <app-icon name="key" extra="h-3.5 w-3.5" />
+                <span class="hidden sm:inline">{{ t('course-manage-access') }}</span>
+              </button>
             }
           </div>
-        </div>
 
-        <div class="flex flex-col gap-1.5">
-          <div class="flex items-center justify-between">
-            <span class="font-body text-xs text-text-muted">
-              {{ t('course-your-progress') }}
-            </span>
-            <span class="font-body text-[13px] font-semibold text-primary">
-              {{ t('course-progress-done', { percent: m.course.progress }) }}
-            </span>
-          </div>
-          <span class="inline-block h-2 w-full overflow-hidden rounded bg-input">
-            <span
-              class="block h-full rounded bg-primary"
-              [style.width.%]="m.course.progress"
-            ></span>
-          </span>
-        </div>
-
-        @if (firstOpen(m); as link) {
-          <a
-            [routerLink]="link"
-            class="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
-          >
-            {{ t('course-chapter-open') }}
-            <app-icon name="chevron-right" extra="h-4 w-4" />
-          </a>
-        }
-
-        <h2 class="font-heading text-lg font-semibold text-text">
-          {{ t('course-chapters-title') }}
-        </h2>
-
-        <div class="flex flex-col gap-3">
-          @for (chapter of m.chapters; track chapter.id) {
-            <div
-              [class]="
-                chapter.state === 'open'
-                  ? 'rounded-lg border border-border bg-surface p-4'
-                  : 'rounded-lg border border-[#F3E0C8] bg-[#FFFBEB]/60 p-4'
-              "
-            >
-              <div class="flex items-center justify-between gap-4">
-                <div class="flex min-w-0 items-center gap-3">
-                  <span
-                    [class]="
-                      chapter.state === 'open'
-                        ? 'inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary font-heading text-[15px] font-bold text-text-inverse'
-                        : 'inline-flex h-9 w-9 items-center justify-center rounded-md bg-[#D97706] font-heading text-[15px] font-bold text-white'
-                    "
-                  >
-                    {{ $index + 1 }}
-                  </span>
-                  <div class="min-w-0">
-                    <div class="flex items-center gap-2">
-                      <span
-                        [class]="
-                          chapter.state === 'open'
-                            ? 'font-body text-[15px] font-semibold text-text'
-                            : 'font-body text-[15px] font-semibold text-text-muted'
-                        "
-                      >
-                        {{ chapter.title }}
-                      </span>
-                      @if (chapter.progress === 100 && chapter.lessons.length > 0) {
-                        <span class="text-primary" [title]="t('course-lesson-done')">
-                          <app-icon name="check-circle" extra="h-4 w-4" />
-                        </span>
-                      } @else if (chapter.state !== 'open') {
-                        <span class="text-[#D97706]">
-                          <app-icon name="lock" extra="h-4 w-4" />
-                        </span>
-                      }
-                    </div>
+          <div class="flex flex-col gap-3">
+            @for (chapter of m.chapters; track chapter.id) {
+              <div
+                [class]="
+                  chapter.state === 'open'
+                    ? 'chapter-card rounded-md border border-border bg-surface px-4 py-3.5'
+                    : 'chapter-card rounded-md border border-[#F3E0C8] bg-[#FFFBEB]/60 px-4 py-3.5'
+                "
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <div class="flex min-w-0 items-center gap-3">
                     <span
                       [class]="
                         chapter.state === 'open'
-                          ? 'font-body text-xs text-text-muted'
-                          : 'font-body text-xs text-[#D97706]'
+                          ? 'inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary font-heading text-[15px] font-bold text-text-inverse'
+                          : 'inline-flex h-8 w-8 items-center justify-center rounded-md bg-[#FEF3C7] font-heading text-[15px] font-bold text-[#D97706]'
                       "
                     >
-                      @if (chapter.state === 'open') {
-                        {{ t('course-lessons', { count: chapter.lessons.length }) }} ·
-                      }
-                      {{
-                        chapter.state === 'open'
-                          ? t('course-chapter-access-open')
-                          : t('course-chapter-access-locked')
-                      }}
+                      {{ $index + 1 }}
                     </span>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-2">
+                        <span
+                          [class]="
+                            chapter.state === 'open'
+                              ? 'font-body text-[15px] font-semibold text-text'
+                              : 'font-body text-[15px] font-semibold text-text-muted'
+                          "
+                        >
+                          {{ chapter.title }}
+                        </span>
+                        @if (chapter.progress === 100 && chapter.lessons.length > 0) {
+                          <span class="text-primary" [title]="t('course-lesson-done')">
+                            <app-icon name="check-circle" extra="h-4 w-4" />
+                          </span>
+                        } @else if (chapter.state !== 'open') {
+                          <span class="text-[#D97706]">
+                            <app-icon name="lock" extra="h-4 w-4" />
+                          </span>
+                        }
+                      </div>
+                      <span
+                        [class]="
+                          chapter.state === 'open'
+                            ? 'font-body text-xs text-text-muted'
+                            : 'font-body text-xs text-[#D97706]'
+                        "
+                      >
+                        @if (chapter.state === 'open') {
+                          {{ t('course-lessons', { count: chapter.lessons.length }) }} ·
+                        }
+                        {{
+                          chapter.state === 'open'
+                            ? t('course-chapter-access-open')
+                            : t('course-chapter-access-locked')
+                        }}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                @if (chapter.state === 'open' && chapter.lessons.length > 0) {
-                  <a
-                    [routerLink]="
-                      '/courses/' + m.course.id + '/' + chapter.id + '/' + chapter.lessons[0].id
-                    "
-                    class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 font-body text-xs font-semibold text-text-inverse hover:bg-inverse"
-                  >
-                    {{ t('course-chapter-open') }}
-                    <app-icon name="chevron-right" extra="h-3.5 w-3.5" />
-                  </a>
-                }
-              </div>
-              <div class="mt-4 flex flex-col gap-2 border-t border-border pt-3">
-                @for (lesson of chapter.lessons; track lesson.id) {
                   @if (chapter.state === 'open') {
-                    <a
-                      [routerLink]="'/courses/' + m.course.id + '/' + chapter.id + '/' + lesson.id"
-                      class="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-input"
+                    <button
+                      type="button"
+                      (click)="toggleExpanded(chapter.id)"
+                      [attr.aria-expanded]="expandedChapter() === chapter.id"
+                      [attr.aria-controls]="'chapter-lessons-' + chapter.id"
+                      [attr.aria-label]="t('course-chapter-open') + ': ' + chapter.title"
+                      class="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 font-body text-xs font-semibold text-text-inverse hover:bg-inverse"
                     >
+                      <span class="hidden sm:inline">{{ t('course-chapter-open') }}</span>
                       <app-icon
-                        [name]="lesson.type === 'call' ? 'clock' : 'file-text'"
-                        extra="h-4 w-4"
+                        [name]="expandedChapter() === chapter.id ? 'chevron-down' : 'chevron-right'"
+                        extra="h-3.5 w-3.5"
                       />
-                      <span>{{ lesson.title }}</span>
-                      @if (lesson.type === 'call') {
-                        <span class="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary">{{
-                          t('course-lesson-call')
-                        }}</span>
-                      }
-                      @if (lesson.done) {
-                        <app-icon name="check-circle" extra="h-4 w-4 text-primary" />
-                      }
-                    </a>
+                    </button>
                   }
+                </div>
+                @if (chapter.state === 'open' && expandedChapter() === chapter.id) {
+                  <div
+                    [id]="'chapter-lessons-' + chapter.id"
+                    class="mt-4 flex flex-col gap-2 border-t border-border pt-3"
+                  >
+                    @if (chapter.lessons.length === 0) {
+                      <p class="py-2 text-sm text-text-muted">{{ t('course-chapter-empty') }}</p>
+                    }
+                    @for (lesson of chapter.lessons; track lesson.id) {
+                      @if (chapter.state === 'open') {
+                        <a
+                          [routerLink]="
+                            '/courses/' + m.course.id + '/' + chapter.id + '/' + lesson.id
+                          "
+                          class="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-input"
+                        >
+                          <app-icon
+                            [name]="lesson.type === 'call' ? 'clock' : 'file-text'"
+                            extra="h-4 w-4"
+                          />
+                          <span>{{ lesson.title }}</span>
+                          @if (lesson.type === 'call') {
+                            <span
+                              class="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary"
+                              >{{ t('course-lesson-call') }}</span
+                            >
+                          }
+                          @if (lesson.done) {
+                            <app-icon name="check-circle" extra="h-4 w-4 text-primary" />
+                          }
+                        </a>
+                      }
+                    }
+                  </div>
                 }
               </div>
-            </div>
-          }
+            }
+          </div>
         </div>
-
         @if (manageOpen()) {
           <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A28]/40 p-4">
             <div
@@ -225,7 +235,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-center gap-2.5">
                     <span
-                      class="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#FEF3C7] text-[#D97706]"
+                      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#FEF3C7] text-[#D97706]"
                       ><app-icon name="key" extra="h-[18px] w-[18px]"
                     /></span>
                     <div class="min-w-0">
@@ -300,7 +310,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
                         [class.bg-[#FFFBEB]]="!isChapterOpen(chapter.id)"
                       >
                         <span
-                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] font-heading text-xs font-bold text-white"
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] font-heading text-xs font-bold text-[#D97706]"
                           [class.bg-primary]="isChapterOpen(chapter.id)"
                           [class.bg-[#D97706]]="!isChapterOpen(chapter.id)"
                           >{{ $index + 1 }}</span
@@ -398,6 +408,10 @@ export class CourseDetailPage {
 
   readonly model = signal<CourseDetail | null>(null);
   readonly error = signal<string | null>(null);
+  readonly expandedChapter = signal<string | null>(null);
+  toggleExpanded(id: string): void {
+    this.expandedChapter.update((current) => (current === id ? null : id));
+  }
   readonly manageOpen = signal(false);
   readonly studentId = signal('');
   readonly studentList = signal<UserResponse[]>([]);
@@ -435,18 +449,6 @@ export class CourseDetailPage {
     } catch {
       this.error.set(this.t('error-generic'));
     }
-  }
-
-  firstOpen(m: CourseDetail): string | null {
-    const chapter = m.chapters.find((c) => c.state === 'open' && c.lessons.length > 0);
-    if (!chapter) {
-      return null;
-    }
-    const lesson = chapter.lessons.find((l) => !l.done) ?? chapter.lessons[0];
-    if (!lesson) {
-      return null;
-    }
-    return `/courses/${m.course.id}/${chapter.id}/${lesson.id}`;
   }
 
   async openManage(): Promise<void> {

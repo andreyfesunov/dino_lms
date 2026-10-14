@@ -8,8 +8,8 @@ import { CallCard } from '../../shared/call-card';
   selector: 'app-calls',
   imports: [CallCard],
   template: `
-    <section class="flex min-h-[calc(100vh-2rem)] flex-col gap-5 rounded-xl bg-surface p-5 md:p-8">
-      <h1 class="font-heading text-[26px] font-semibold">{{ t('nav-calls') }}</h1>
+    <section class="design-page">
+      <h1 class="font-heading text-2xl md:text-[28px] font-semibold">{{ t('nav-calls') }}</h1>
       @if (error()) {
         <p role="alert" class="text-danger">{{ error() }}</p>
       }

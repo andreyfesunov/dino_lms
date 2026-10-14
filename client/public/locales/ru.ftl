@@ -310,3 +310,12 @@ access-default-hint = При назначении открываются тол�
 access-no-matches = Студенты не найдены
 access-saving = Сохранение…
 access-retry = Повторить загрузку
+
+course-chapter-empty = Занятия скоро появятся
+code-copy = Копировать
+code-copied = Скопировано
+code-copy-error = Не удалось скопировать
+
+page-loading = Загрузка…
+list-empty = Ничего не найдено
+students-created = Студент добавлен
