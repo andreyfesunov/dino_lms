@@ -72,18 +72,20 @@ import { localCallInput, localCallTime } from './call-time';
               </div>
               <p class="text-sm text-text-muted">{{ t('calls-window-help') }}</p>
               @for (window of cfg.windows; track $index; let i = $index) {
-                <div class="flex flex-wrap items-end gap-3 rounded-md bg-input p-3">
-                  <label class="flex min-w-0 flex-1 flex-col gap-1 text-sm"
+                <div class="grid gap-3 rounded-md bg-input p-3 sm:grid-cols-2">
+                  <label class="flex min-w-0 flex-col gap-1 text-sm"
                     >{{ t('calls-start')
                     }}<input
                       type="datetime-local"
+                      class="min-w-0 w-full rounded-md border border-border bg-surface px-2 py-2 font-body text-[13px]"
                       [ngModel]="local(window.starts_at, cfg.timezone)"
                       (ngModelChange)="editWindow(i, 'starts_at', $event)"
                   /></label>
-                  <label class="flex min-w-0 flex-1 flex-col gap-1 text-sm"
+                  <label class="flex min-w-0 flex-col gap-1 text-sm"
                     >{{ t('calls-end')
                     }}<input
                       type="datetime-local"
+                      class="min-w-0 w-full rounded-md border border-border bg-surface px-2 py-2 font-body text-[13px]"
                       [ngModel]="local(window.ends_at, cfg.timezone)"
                       (ngModelChange)="editWindow(i, 'ends_at', $event)"
                   /></label>

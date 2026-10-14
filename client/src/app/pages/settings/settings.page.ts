@@ -45,12 +45,15 @@ import { Icon } from '../../shared/icon';
 
         <label class="flex flex-col gap-2 font-body text-[13px] font-medium text-text">
           {{ t('field-email') }}
-          <input
-            readonly
-            [ngModel]="session.user()?.login"
-            name="login"
-            class="h-11 w-full rounded-md border border-border bg-input px-3 font-body text-sm text-text-muted"
-          />
+          <div class="relative">
+            <input
+              readonly
+              [ngModel]="session.user()?.login"
+              name="login"
+              class="h-11 w-full rounded-md border border-border bg-input pl-3 pr-10 font-body text-sm text-text-muted"
+            />
+            <app-icon name="lock" extra="absolute right-3 top-3.5 h-4 w-4 text-text-muted" />
+          </div>
         </label>
 
         <div class="flex flex-col gap-3 rounded-md bg-input p-4">

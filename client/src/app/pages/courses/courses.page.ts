@@ -76,8 +76,12 @@ interface CourseRow {
         </div>
       }
 
-      @if (loading()) { <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p> }
-      @if (error()) { <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p> }
+      @if (loading()) {
+        <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p>
+      }
+      @if (error()) {
+        <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p>
+      }
       <div class="grid grid-cols-1 gap-4">
         @for (row of rows(); track row.course.id) {
           <a
@@ -292,7 +296,9 @@ export class CoursesPage {
       }
     } catch {
       this.error.set(this.t('error-generic'));
-    } finally { this.loading.set(false); }
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   async submitGrant(): Promise<void> {

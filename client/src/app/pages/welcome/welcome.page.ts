@@ -25,7 +25,10 @@ import { Icon } from '../../shared/icon';
       >
         <header class="welcome__brand flex items-center justify-between gap-4">
           <div class="flex items-center gap-3">
-            <app-dino-logo sizeClass="h-9 w-9 rounded-[10px] md:h-10 md:w-10 md:rounded-xl" />
+            <app-dino-logo
+              [inverse]="true"
+              sizeClass="h-9 w-9 rounded-[10px] md:h-10 md:w-10 md:rounded-md"
+            />
             <span class="font-heading text-lg font-semibold md:text-[22px]">
               {{ t('brand-name') }}
             </span>
@@ -50,14 +53,15 @@ import { Icon } from '../../shared/icon';
           class="welcome__hero flex w-full max-w-[640px] flex-col items-start gap-5 md:gap-6"
         >
           <h1
-            class="font-heading text-5xl font-semibold tracking-tight md:text-6xl xl:text-[72px] xl:tracking-[-0.02em]"
+            class="font-heading text-5xl font-semibold leading-[60px] tracking-tight md:text-6xl md:leading-[75px] xl:text-[72px] xl:leading-[90px] xl:tracking-[-0.02em]"
           >
             {{ t('brand-name') }}
           </h1>
           <p
-            class="whitespace-pre-line font-heading text-[22px] font-medium leading-snug text-primary-soft md:text-[32px]"
+            class="whitespace-pre-line font-heading text-[22px] font-medium leading-[28px] text-primary-soft md:text-[32px] md:leading-[38px]"
           >
-            {{ t('welcome-tagline') }}
+            <span>{{ t('welcome-tagline-start') }}</span>
+            <span class="block md:inline"> {{ t('welcome-tagline-end') }}</span>
           </p>
           <p
             class="max-w-[640px] font-body text-base leading-normal text-text-inverse/80 md:text-lg"

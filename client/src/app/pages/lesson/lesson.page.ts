@@ -16,7 +16,11 @@ import { CodeBlocks } from '../../shared/code-blocks';
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
     }
-    @if (loading()) { <section class="design-page"><p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p></section> }
+    @if (loading()) {
+      <section class="design-page">
+        <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p>
+      </section>
+    }
     @if (lesson(); as l) {
       <section class="design-page lesson-page">
         <div class="lesson-breadcrumb flex items-center justify-between gap-4 md:hidden">
@@ -236,7 +240,9 @@ export class LessonPage {
       this.done.set(lesson.done);
     } catch {
       if (generation === this.loadGeneration) this.error.set(this.t('error-generic'));
-    } finally { if (generation === this.loadGeneration) this.loading.set(false); }
+    } finally {
+      if (generation === this.loadGeneration) this.loading.set(false);
+    }
   }
 
   meta(): string {

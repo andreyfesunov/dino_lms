@@ -319,3 +319,6 @@ code-copy-error = Could not copy
 page-loading = Loading…
 list-empty = No results
 students-created = Student added
+
+welcome-tagline-start = Learn. Grow.
+welcome-tagline-end = Like a dinosaur.

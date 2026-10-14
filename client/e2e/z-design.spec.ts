@@ -69,20 +69,64 @@ test('public design screens at desktop, tablet and mobile', async ({ browser }) 
   test.setTimeout(120000);
   const context = await russianContext(browser);
   const page = await context.newPage();
+  let initialized = false;
   await page.route('**/api/bootstrap', (route) =>
     route.fulfill({
-      json: { has_admin: false, user: null, software_version: '0.1.0' },
+      json: { has_admin: initialized, user: null, software_version: '0.1.0' },
     }),
   );
   await page.goto('/');
   await expect(page.locator('app-welcome')).toBeVisible();
+  await screenshots(page, 'welcome-first-run');
+  initialized = true;
+  await page.reload();
+  await expect(page.locator('app-welcome')).toBeVisible();
   await screenshots(page, 'welcome');
+  initialized = false;
   await page.goto('/setup');
   await expect(page.locator('app-setup form')).toBeVisible();
   await screenshots(page, 'setup');
   await page.goto('/login');
   await expect(page.locator('app-login form')).toBeVisible();
   await screenshots(page, 'login');
+  await context.close();
+});
+
+test('empty lists, loading and API failures keep the responsive layout', async ({ browser }) => {
+  test.setTimeout(120000);
+  const context = await russianContext(browser);
+  const page = await context.newPage();
+  await login(page);
+  await page.goto('/courses');
+  await page.getByRole('searchbox').fill('course-that-does-not-exist');
+  await expect(page.locator('.course-card')).toHaveCount(0);
+  await screenshots(page, 'courses-empty');
+  await page.goto('/users');
+  await page.getByRole('searchbox').fill('no-such-user');
+  await expect(page.getByText('Ничего не найдено', { exact: true })).toBeVisible();
+  await screenshots(page, 'users-empty');
+  await page.route('**/api/courses', (route) =>
+    route.fulfill({ status: 500, json: { code: 'internal' } }),
+  );
+  await page.goto('/courses');
+  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(page.locator('.course-card')).toHaveCount(0);
+  await screenshots(page, 'courses-error');
+  await page.unroute('**/api/courses');
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(`**/api/courses/${course}`, async (route) => {
+    await pending;
+    await route.continue();
+  });
+  await page.goto(`/courses/${course}`);
+  await expect(page.getByRole('status')).toHaveText('Загрузка…');
+  await screenshots(page, 'course-loading');
+  release();
+  await expect(page.locator('.chapter-card')).toHaveCount(3);
+  await page.unroute(`**/api/courses/${course}`);
   await context.close();
 });
 
@@ -182,6 +226,24 @@ test('user dialogs match design and retain keyboard focus', async ({ browser }) 
   await page.locator('app-users > section > div').first().getByRole('button').click();
   await screenshots(page, 'invite-users', true);
   await page.getByRole('dialog').locator('textarea').fill(`invite-${Date.now()}@example.test`);
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route('**/api/users/invite', async (route) => {
+    await pending;
+    await route.fulfill({ status: 500, json: { code: 'internal' } });
+  });
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: /Добавить 1/ })
+    .click();
+  await expect(page.getByRole('dialog').locator('textarea')).toBeDisabled();
+  await screenshots(page, 'invite-saving', true);
+  release();
+  await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
+  await screenshots(page, 'invite-error', true);
+  await page.unroute('**/api/users/invite');
   await page
     .getByRole('dialog')
     .getByRole('button', { name: /Добавить 1/ })
@@ -213,6 +275,10 @@ test('onboarding, student locks and access dialogs at all screen sizes', async (
   await admin.goto(`/courses/${course}`);
   await admin.getByRole('button', { name: 'Управление доступом', exact: true }).click();
   await expect(admin.getByRole('dialog').getByRole('switch')).toHaveCount(3);
+  await expect(admin.getByRole('dialog').getByText('3', { exact: true })).toHaveCSS(
+    'color',
+    'rgb(255, 255, 255)',
+  );
   await screenshots(admin, 'chapter-access', true);
   const studentContext = await russianContext(browser);
   const learner = await studentContext.newPage();
@@ -233,6 +299,44 @@ test('onboarding, student locks and access dialogs at all screen sizes', async (
   await learner.goto(`/courses/${course}/intro/consultation`);
   await expect(learner.locator('app-call-lesson')).toBeVisible();
   await screenshots(learner, 'student-call');
+  const teacherResponse = await admin.request.post('/api/students', {
+    data: { login: `teacher-design-${Date.now()}@example.test`, password: 'teacher password' },
+  });
+  expect(teacherResponse.ok()).toBeTruthy();
+  const teacher = await teacherResponse.json();
+  expect(
+    (
+      await admin.request.post(`/api/users/${teacher.id}`, {
+        data: { role: 'teacher', status: 'active', first_name: 'Анна', last_name: 'Иванова' },
+      })
+    ).ok(),
+  ).toBeTruthy();
+  const settingsPath = `/api/courses/${course}/intro/consultation/calls/settings`;
+  const settings = await (await admin.request.get(settingsPath)).json();
+  const start = Math.ceil((Date.now() / 1000 + 86400) / 1800) * 1800;
+  expect(
+    (
+      await admin.request.put(settingsPath, {
+        data: {
+          ...settings,
+          teacher_id: teacher.id,
+          duration_min: 30,
+          timezone: 'Europe/Moscow',
+          windows: [{ id: '', starts_at: start, ends_at: start + 3600 }],
+        },
+      })
+    ).ok(),
+  ).toBeTruthy();
+  const teacherContext = await russianContext(browser);
+  const teacherPage = await teacherContext.newPage();
+  await login(teacherPage, teacher.login, 'teacher password');
+  await teacherPage.goto(`/courses/${course}/intro/consultation`);
+  await teacherPage.locator('app-call-lesson summary').click();
+  await expect(teacherPage.locator('app-call-lesson input[type="number"]')).toHaveValue('30');
+  await screenshots(teacherPage, 'teacher-availability');
+  await teacherPage.goto('/users');
+  await expect(teacherPage).toHaveURL(/\/courses$/);
+  await teacherContext.close();
   await learner.goto('/users');
   await expect(learner).toHaveURL(/\/courses$/);
   await studentContext.close();

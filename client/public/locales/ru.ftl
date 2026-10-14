@@ -319,3 +319,6 @@ code-copy-error = Не удалось скопировать
 page-loading = Загрузка…
 list-empty = Ничего не найдено
 students-created = Студент добавлен
+
+welcome-tagline-start = Учитесь. Растите.
+welcome-tagline-end = Как динозавр.

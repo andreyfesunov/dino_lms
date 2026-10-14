@@ -23,7 +23,11 @@ import { DialogFocus } from '../../shared/dialog-focus';
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
     }
-    @if (!model() && !error()) { <section class="design-page"><p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p></section> }
+    @if (!model() && !error()) {
+      <section class="design-page">
+        <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p>
+      </section>
+    }
     @if (model(); as m) {
       <section class="design-page course-detail">
         <div class="course-header flex flex-col gap-5">
@@ -37,7 +41,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
             </a>
           </div>
 
-          <div class="flex flex-col gap-3">
+          <div class="course-overview flex flex-col gap-3">
             <div class="flex flex-wrap items-center gap-3">
               <h1 class="font-heading text-[26px] font-bold text-text">
                 {{ m.course.title }}
@@ -54,7 +58,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
                 {{ m.course.description }}
               </p>
             }
-            <div class="flex flex-wrap items-center gap-4 text-text-muted">
+            <div class="course-stats flex flex-wrap items-center gap-4 text-text-muted">
               <span class="flex items-center gap-1.5 font-body text-[13px]">
                 <app-icon name="book-open" extra="h-4 w-4" />
                 {{ t('course-chapters', { count: m.chapters.length }) }}
@@ -72,7 +76,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
             </div>
           </div>
 
-          <div class="flex flex-col gap-1.5">
+          <div class="course-progress flex flex-col gap-1.5">
             <div class="flex items-center justify-between">
               <span class="font-body text-xs text-text-muted">
                 {{ t('course-your-progress') }}
@@ -310,7 +314,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
                         [class.bg-[#FFFBEB]]="!isChapterOpen(chapter.id)"
                       >
                         <span
-                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] font-heading text-xs font-bold text-[#D97706]"
+                          class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[6px] font-heading text-xs font-bold text-white"
                           [class.bg-primary]="isChapterOpen(chapter.id)"
                           [class.bg-[#D97706]]="!isChapterOpen(chapter.id)"
                           >{{ $index + 1 }}</span

@@ -17,7 +17,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
     }
     <section class="design-page users-page">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <div class="users-heading flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div class="flex flex-col gap-1">
           <h1 class="font-heading text-2xl font-bold text-text md:text-[28px]">
             {{ t('users-title') }}
@@ -35,10 +35,11 @@ import { DialogFocus } from '../../shared/dialog-focus';
           <button
             type="button"
             (click)="openInvite()"
+            [attr.aria-label]="t('users-invite')"
             class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse hover:bg-inverse"
           >
             <app-icon name="plus" extra="h-4 w-4 text-text-inverse" />
-            <span>{{ t('users-invite') }}</span>
+            <span class="hidden md:inline">{{ t('users-invite') }}</span>
           </button>
         </div>
       </div>
@@ -104,8 +105,12 @@ import { DialogFocus } from '../../shared/dialog-focus';
         </div>
       }
 
-      @if (loading()) { <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p> }
-      @if (!loading() && !error() && rows().length === 0) { <p class="text-sm text-text-muted">{{ t('list-empty') }}</p> }
+      @if (loading()) {
+        <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p>
+      }
+      @if (!loading() && !error() && rows().length === 0) {
+        <p class="text-sm text-text-muted">{{ t('list-empty') }}</p>
+      }
       <div class="users-list overflow-x-auto" (scroll)="positionRowMenu()">
         <table class="user-table w-full border-collapse">
           <thead>
@@ -231,7 +236,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
             }
             <div class="mb-4 flex items-start justify-between gap-4">
               <div>
-                <h2 class="font-heading text-[22px] font-bold text-text">
+                <h2 class="font-heading text-[22px] font-semibold text-text">
                   {{ t('users-invite-title') }}
                 </h2>
                 <p class="mt-1 font-body text-sm text-text-secondary">
@@ -241,7 +246,8 @@ import { DialogFocus } from '../../shared/dialog-focus';
               <button
                 [disabled]="busy()"
                 type="button"
-                [attr.aria-label]="t('access-close')" class="rounded-md p-1 text-text-secondary hover:bg-input"
+                [attr.aria-label]="t('access-close')"
+                class="rounded-md p-1 text-text-secondary hover:bg-input"
                 (click)="closeDialog()"
               >
                 <app-icon name="x" />
@@ -299,7 +305,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
             }
             <div class="mb-4 flex items-start justify-between gap-4">
               <div>
-                <h2 class="font-heading text-[22px] font-bold text-text">
+                <h2 class="font-heading text-[22px] font-semibold text-text">
                   {{ t('users-created-title') }}
                 </h2>
                 <p class="mt-1 font-body text-sm text-text-secondary">
@@ -309,7 +315,8 @@ import { DialogFocus } from '../../shared/dialog-focus';
               <button
                 [disabled]="busy()"
                 type="button"
-                [attr.aria-label]="t('access-close')" class="rounded-md p-1 text-text-secondary hover:bg-input"
+                [attr.aria-label]="t('access-close')"
+                class="rounded-md p-1 text-text-secondary hover:bg-input"
                 (click)="closeDialog()"
               >
                 <app-icon name="x" />
@@ -387,7 +394,8 @@ import { DialogFocus } from '../../shared/dialog-focus';
               <button
                 [disabled]="busy()"
                 type="button"
-                [attr.aria-label]="t('access-close')" class="rounded-md p-1 text-text-secondary hover:bg-input"
+                [attr.aria-label]="t('access-close')"
+                class="rounded-md p-1 text-text-secondary hover:bg-input"
                 (click)="closeDialog()"
               >
                 <app-icon name="x" />
@@ -489,7 +497,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
             }
             <div class="mb-4 flex items-start justify-between gap-4">
               <div>
-                <h2 class="font-heading text-[22px] font-bold text-text">
+                <h2 class="font-heading text-[22px] font-semibold text-text">
                   {{ t('users-new-password-title') }}
                 </h2>
                 <p class="mt-1 font-body text-sm text-text-secondary">
@@ -499,7 +507,8 @@ import { DialogFocus } from '../../shared/dialog-focus';
               <button
                 [disabled]="busy()"
                 type="button"
-                [attr.aria-label]="t('access-close')" class="rounded-md p-1 text-text-secondary hover:bg-input"
+                [attr.aria-label]="t('access-close')"
+                class="rounded-md p-1 text-text-secondary hover:bg-input"
                 (click)="closeDialog()"
               >
                 <app-icon name="x" />
@@ -514,7 +523,8 @@ import { DialogFocus } from '../../shared/dialog-focus';
                   [disabled]="busy()"
                   type="button"
                   class="rounded-md p-1.5 text-text-inverse transition-colors hover:bg-white/10"
-                  [attr.aria-label]="t('action-copy')" (click)="copyText(pwd)"
+                  [attr.aria-label]="t('action-copy')"
+                  (click)="copyText(pwd)"
                 >
                   <app-icon name="copy" extra="h-4 w-4 text-text-inverse" />
                 </button>
@@ -550,7 +560,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
             @if (busy()) {
               <p role="status" class="mb-3 text-xs text-text-muted">{{ t('access-saving') }}</p>
             }
-            <h2 class="font-heading text-[22px] font-bold text-text">
+            <h2 class="font-heading text-[22px] font-semibold text-text">
               {{ t('users-delete-title') }}
             </h2>
             <p class="mt-2 font-body text-sm text-text-secondary">
@@ -649,7 +659,9 @@ export class UsersPage {
       this.users.set(result.users);
     } catch {
       this.error.set(this.t('error-generic'));
-    } finally { this.loading.set(false); }
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   rows(): UserResponse[] {

@@ -270,7 +270,7 @@ test('settings translations, responsive user actions and named access controls',
     'ОченьДлиннаяФамилияПреподавателя А.',
   );
   await page.reload();
-  const profile = page.locator('aside button[title]');
+  const profile = page.locator('aside a[title]');
   await expect(profile).toHaveText('ОченьДлиннаяФамилияПреподавателя А.');
   const name = profile.locator('span').last();
   await expect(name).toHaveCSS('white-space', 'normal');
@@ -288,7 +288,6 @@ test('settings translations, responsive user actions and named access controls',
   expect(languageBounds.y).toBeGreaterThan(passwordBounds.y + passwordBounds.height);
   await page.locator('select[name="language"]').selectOption('ru');
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.locator('aside > div').last().locator('button').last().click();
   const logoutResponse = page.waitForResponse(
     (response) => response.url().endsWith('/api/logout') && response.request().method() === 'POST',
   );

@@ -53,8 +53,12 @@ import { Icon } from '../../shared/icon';
           />
         </label>
 
-        @if (error()) { <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p> }
-        @if (created()) { <p role="status" class="text-sm text-primary">{{ t('students-created') }}</p> }
+        @if (error()) {
+          <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p>
+        }
+        @if (created()) {
+          <p role="status" class="text-sm text-primary">{{ t('students-created') }}</p>
+        }
         @if (temporaryPassword(); as pwd) {
           <div class="flex items-center justify-between gap-3 rounded-md bg-inverse px-4 py-3">
             <code class="font-mono text-sm text-text-inverse">{{ pwd }}</code>
@@ -120,7 +124,9 @@ export class CreateStudentPage {
       );
       this.temporaryPassword.set(result.temporary_password ?? '');
       this.created.set(true);
-    } catch { this.error.set(this.t('error-generic')); } finally {
+    } catch {
+      this.error.set(this.t('error-generic'));
+    } finally {
       this.busy.set(false);
     }
   }

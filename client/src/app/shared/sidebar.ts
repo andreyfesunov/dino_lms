@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService } from '../core/api.service';
 import { SessionStore } from '../core/session.store';
@@ -37,8 +37,29 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             <div class="my-1 h-px bg-border"></div>
           }
 
+          @if (session.isAdmin()) {
+            <a
+              routerLink="/users"
+              [attr.aria-label]="t('nav-users')"
+              class="items-center justify-center rounded-md p-2.5 lg:hidden"
+              [class]="navIconClass(isActive('users'))"
+            >
+              <app-icon name="user-cog" [extra]="tone(isActive('users'))" />
+            </a>
+            <a
+              routerLink="/users"
+              [attr.aria-label]="t('nav-users')"
+              class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
+              [class]="navItemClass(isActive('users'))"
+            >
+              <app-icon name="user-cog" [extra]="tone(isActive('users'))" />
+              <span>{{ t('nav-users') }}</span>
+            </a>
+          }
+
           <a
             routerLink="/courses"
+            [attr.aria-label]="t('nav-courses')"
             class="items-center justify-center rounded-md p-2.5 lg:hidden"
             [class]="navIconClass(isActive('courses'))"
           >
@@ -46,6 +67,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
           </a>
           <a
             routerLink="/courses"
+            [attr.aria-label]="t('nav-courses')"
             class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
             [class]="navItemClass(isActive('courses'))"
           >
@@ -55,71 +77,53 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
 
           <a
             routerLink="/calls"
+            [attr.aria-label]="t('nav-calls')"
             class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 lg:justify-start"
             [class]="navItemClass(isActive('calls'))"
           >
             <app-icon name="clock" /><span class="hidden lg:inline">{{ t('nav-calls') }}</span>
           </a>
-          @if (session.isAdmin()) {
-            <a
-              routerLink="/users"
-              class="items-center justify-center rounded-md p-2.5 lg:hidden"
-              [class]="navIconClass(isActive('users'))"
-            >
-              <app-icon name="user-cog" [extra]="tone(isActive('users'))" />
-            </a>
-            <a
-              routerLink="/users"
-              class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
-              [class]="navItemClass(isActive('users'))"
-            >
-              <app-icon name="user-cog" [extra]="tone(isActive('users'))" />
-              <span>{{ t('nav-users') }}</span>
-            </a>
-          }
         </div>
 
         <div class="flex flex-col gap-1">
-          <div [class]="menuClass()">
-            <div class="profile-menu__panel profile-menu--always">
-              <div class="profile-menu__inner flex flex-col gap-1">
-                <a
-                  routerLink="/settings"
-                  class="items-center justify-center rounded-md p-2.5 lg:hidden"
-                  [class]="navIconClass(isActive('settings'))"
-                >
-                  <app-icon name="settings" [extra]="tone(isActive('settings'))" />
-                </a>
-                <a
-                  routerLink="/settings"
-                  class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
-                  [class]="navItemClass(isActive('settings'))"
-                >
-                  <app-icon name="settings" [extra]="tone(isActive('settings'))" />
-                  <span>{{ t('nav-settings') }}</span>
-                </a>
-                <button
-                  type="button"
-                  (click)="logout()"
-                  class="w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 lg:hidden"
-                >
-                  <app-icon name="log-out" extra="text-danger" />
-                </button>
-                <button
-                  type="button"
-                  (click)="logout()"
-                  class="hidden w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 lg:flex"
-                >
-                  <app-icon name="log-out" extra="text-danger" />
-                  <span>{{ t('nav-logout') }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
+          <a
+            routerLink="/settings"
+            [attr.aria-label]="t('nav-settings')"
+            class="items-center justify-center rounded-md p-2.5 lg:hidden"
+            [class]="navIconClass(isActive('settings'))"
+          >
+            <app-icon name="settings" [extra]="tone(isActive('settings'))" />
+          </a>
+          <a
+            routerLink="/settings"
+            [attr.aria-label]="t('nav-settings')"
+            class="hidden items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium lg:flex"
+            [class]="navItemClass(isActive('settings'))"
+          >
+            <app-icon name="settings" [extra]="tone(isActive('settings'))" />
+            <span>{{ t('nav-settings') }}</span>
+          </a>
           <button
             type="button"
-            (click)="toggleMenu()"
+            (click)="logout()"
+            [attr.aria-label]="t('nav-logout')"
+            class="w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 lg:hidden"
+          >
+            <app-icon name="log-out" extra="text-danger" />
+          </button>
+          <button
+            type="button"
+            (click)="logout()"
+            [attr.aria-label]="t('nav-logout')"
+            class="hidden w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 lg:flex"
+          >
+            <app-icon name="log-out" extra="text-danger" />
+            <span>{{ t('nav-logout') }}</span>
+          </button>
+
+          <a
+            routerLink="/settings"
+            [attr.aria-label]="t('nav-settings')"
             class="flex min-w-0 w-full items-center justify-center gap-3 rounded-md px-3 py-2.5 text-left hover:bg-input lg:justify-start"
             [title]="session.user()?.display_name ?? ''"
           >
@@ -133,7 +137,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             >
               {{ session.user()?.short_name || session.user()?.display_name }}
             </span>
-          </button>
+          </a>
         </div>
       </aside>
 
@@ -142,6 +146,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
       >
         <a
           routerLink="/courses"
+          [attr.aria-label]="t('nav-courses')"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('courses') ? 'text-primary' : 'text-text-secondary'"
         >
@@ -150,6 +155,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
         </a>
         <a
           routerLink="/calls"
+          [attr.aria-label]="t('nav-calls')"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('calls') ? 'text-primary' : 'text-text-secondary'"
         >
@@ -159,7 +165,21 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
         </a>
         @if (session.isAdmin()) {
           <a
+            routerLink="/students/new"
+            [attr.aria-label]="t('users-add-student')"
+            class="flex flex-1 flex-col items-center gap-1 text-primary"
+          >
+            <span
+              class="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-text-inverse"
+              ><app-icon name="plus" extra="h-5 w-5"
+            /></span>
+            <span class="font-body text-[12px]">{{ t('nav-create') }}</span>
+          </a>
+        }
+        @if (session.isAdmin()) {
+          <a
             routerLink="/users"
+            [attr.aria-label]="t('nav-users')"
             class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
             [class]="isActive('users') ? 'text-primary' : 'text-text-secondary'"
           >
@@ -169,6 +189,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
         }
         <a
           routerLink="/settings"
+          [attr.aria-label]="t('nav-settings')"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
           [class]="isActive('settings') ? 'text-primary' : 'text-text-secondary'"
         >
@@ -185,8 +206,6 @@ export class Sidebar {
   private i18n = inject(I18nService);
   private router = inject(Router);
 
-  private readonly menuOpen = signal(false);
-
   t(key: string): string {
     return this.i18n.format(key);
   }
@@ -197,7 +216,7 @@ export class Sidebar {
       return url === '/calls';
     }
     if (id === 'users') {
-      return url === '/users';
+      return url === '/users' || url === '/students/new';
     }
     if (id === 'settings') {
       return url === '/settings';
@@ -214,18 +233,8 @@ export class Sidebar {
     }
   }
 
-  toggleMenu(): void {
-    this.menuOpen.update((open) => !open);
-  }
-
   canGoBack(): boolean {
     return typeof history !== 'undefined' && history.length > 1;
-  }
-
-  menuClass(): string {
-    return this.menuOpen()
-      ? 'profile-menu profile-menu--open flex flex-col gap-1'
-      : 'profile-menu flex flex-col gap-1';
   }
 
   navItemClass(active: boolean): string {

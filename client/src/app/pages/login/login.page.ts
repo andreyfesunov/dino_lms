@@ -16,7 +16,7 @@ import { DinoLogo } from '../../shared/dino-logo';
         class="hidden w-[38.8889%] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse xl:flex"
       >
         <div class="flex items-center gap-3">
-          <app-dino-logo sizeClass="h-12 w-12 rounded-[14px]" />
+          <app-dino-logo [inverse]="true" sizeClass="h-12 w-12 rounded-[14px]" />
           <span class="font-heading text-2xl font-semibold">{{ t('brand-name') }}</span>
         </div>
         <div class="flex flex-col gap-4">
@@ -33,7 +33,7 @@ import { DinoLogo } from '../../shared/dino-logo';
         class="hidden h-80 flex-col justify-end gap-4 bg-inverse px-10 pb-12 pt-10 text-text-inverse md:flex xl:hidden"
       >
         <div class="flex items-center gap-3">
-          <app-dino-logo sizeClass="h-11 w-11 rounded-xl" />
+          <app-dino-logo [inverse]="true" sizeClass="h-11 w-11 rounded-md" />
           <span class="font-heading text-[22px] font-semibold">{{ t('brand-name') }}</span>
         </div>
         <p class="font-heading text-[32px] font-semibold leading-tight">

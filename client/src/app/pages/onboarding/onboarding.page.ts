@@ -70,7 +70,11 @@ import { Icon } from '../../shared/icon';
             />
           </label>
 
-          @if (error()) { <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p> }
+          @if (error()) {
+            <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">
+              {{ error() }}
+            </p>
+          }
           <button
             type="submit"
             [disabled]="form.invalid || busy()"
@@ -108,7 +112,9 @@ export class OnboardingPage {
       const result = await this.api.onboarding(this.firstName(), this.lastName());
       this.session.setUser(result.user);
       await this.router.navigateByUrl('/courses');
-    } catch { this.error.set(this.t('error-generic')); } finally {
+    } catch {
+      this.error.set(this.t('error-generic'));
+    } finally {
       this.busy.set(false);
     }
   }

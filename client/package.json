@@ -10,7 +10,8 @@
     "test:e2e": "playwright test",
     "check:i18n": "node scripts/check-translations.cjs",
     "prebuild": "npm run check:i18n",
-    "pretest": "npm run check:i18n"
+    "pretest": "npm run check:i18n",
+    "report:design": "node scripts/design-review.cjs"
   },
   "private": true,
   "packageManager": "npm@10.9.8",

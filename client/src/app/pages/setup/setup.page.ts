@@ -16,7 +16,7 @@ import { DinoLogo } from '../../shared/dino-logo';
         class="setup-brand hidden w-[38.8889%] shrink-0 flex-col justify-between bg-inverse p-12 text-text-inverse xl:flex"
       >
         <div class="flex items-center gap-3">
-          <app-dino-logo sizeClass="h-12 w-12 rounded-[14px]" />
+          <app-dino-logo [inverse]="true" sizeClass="h-12 w-12 rounded-[14px]" />
           <span class="font-heading text-2xl font-semibold">{{ t('brand-name') }}</span>
         </div>
         <div class="flex flex-col gap-6">
