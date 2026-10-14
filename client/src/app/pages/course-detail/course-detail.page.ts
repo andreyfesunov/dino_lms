@@ -204,7 +204,7 @@ import { DialogFocus } from '../../shared/dialog-focus';
                           class="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-input"
                         >
                           <app-icon
-                            [name]="lesson.type === 'call' ? 'clock' : 'file-text'"
+                            [name]="lesson.type === 'call' ? 'clock' : lesson.type === 'practice' ? 'briefcase-business' : 'file-text'"
                             extra="h-4 w-4"
                           />
                           <span>{{ lesson.title }}</span>

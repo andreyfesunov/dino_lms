@@ -13,6 +13,8 @@ import {
   CallSettings,
   CallWindow,
   CallBooking,
+  PracticeAttempt,
+  PracticeDashboard,
 } from './api.types';
 
 export class ApiError extends Error {
@@ -219,6 +221,38 @@ export class ApiService {
       'POST',
       `/api/courses/${course}/${chapter}/${lesson}/progress`,
       { done },
+    );
+  }
+
+  practiceAttempts(course: string, chapter: string, lesson: string) {
+    return this.request<{ attempts: PracticeAttempt[]; can_submit: boolean }>(
+      'GET',
+      `/api/courses/${course}/${chapter}/${lesson}/practice`,
+    );
+  }
+
+  submitPractice(course: string, chapter: string, lesson: string, submission: { repository_url: string; report: string; message: string }) {
+    return this.request<PracticeAttempt>(
+      'POST',
+      `/api/courses/${course}/${chapter}/${lesson}/practice/attempts`,
+      submission,
+    );
+  }
+
+  myPractices() {
+    return this.request<{ attempts: PracticeAttempt[] }>('GET', '/api/practices/mine');
+  }
+
+  practiceDashboard(course: string) {
+    const params = new URLSearchParams({ course_id: course });
+    return this.request<PracticeDashboard>('GET', `/api/practices?${params}`);
+  }
+
+  reviewPractice(id: string, decision: 'accepted' | 'revision_requested', feedback: string) {
+    return this.request<PracticeAttempt>(
+      'POST',
+      `/api/practice-attempts/${encodeURIComponent(id)}/review`,
+      { decision, feedback },
     );
   }
 

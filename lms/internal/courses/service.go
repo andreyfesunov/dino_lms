@@ -254,8 +254,12 @@ func (s *CourseService) MarkLessonDone(ctx context.Context, actor kernel.Actor, 
 	if err := s.checkLessonAccess(ctx, actor, courseID, chapterID, lessonID); err != nil {
 		return err
 	}
-	if s.catalog.Get(courseID).Lesson(chapterID, lessonID).Kind() == "call" {
+	kind := s.catalog.Get(courseID).Lesson(chapterID, lessonID).Kind()
+	if kind == "call" {
 		return &CoursesError{Code: CodeForbidden, msg: "calls are completed by the teacher"}
+	}
+	if kind == "practice" {
+		return &CoursesError{Code: CodeForbidden, msg: "practices are completed when accepted"}
 	}
 	if err := s.repo.MarkLessonDone(ctx, actor.UserID, courseID, LessonKey(chapterID, lessonID)); err != nil {
 		return StorageError(err)
@@ -268,8 +272,12 @@ func (s *CourseService) MarkLessonUndone(ctx context.Context, actor kernel.Actor
 	if err := s.checkLessonAccess(ctx, actor, courseID, chapterID, lessonID); err != nil {
 		return err
 	}
-	if s.catalog.Get(courseID).Lesson(chapterID, lessonID).Kind() == "call" {
+	kind := s.catalog.Get(courseID).Lesson(chapterID, lessonID).Kind()
+	if kind == "call" {
 		return &CoursesError{Code: CodeForbidden, msg: "calls are completed by the teacher"}
+	}
+	if kind == "practice" {
+		return &CoursesError{Code: CodeForbidden, msg: "practice progress is controlled by review"}
 	}
 	if err := s.repo.MarkLessonUndone(ctx, actor.UserID, courseID, LessonKey(chapterID, lessonID)); err != nil {
 		return StorageError(err)

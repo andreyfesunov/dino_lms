@@ -6,7 +6,7 @@ import {
   UrlTree,
   provideRouter,
 } from '@angular/router';
-import { manageUsersGuard, needsOnboardingGuard, onboardedGuard } from './guards';
+import { manageUsersGuard, needsOnboardingGuard, onboardedGuard, practiceReviewerGuard, studentGuard } from './guards';
 import { SessionStore } from './session.store';
 import { UserResponse } from './api.types';
 
@@ -37,12 +37,16 @@ describe('session guards', () => {
     TestBed.inject(SessionStore).setUser(null);
     expect(check(onboardedGuard)).toBe('/login');
     expect(check(manageUsersGuard)).toBe('/login');
+    expect(check(practiceReviewerGuard)).toBe('/login');
+    expect(check(studentGuard)).toBe('/login');
   });
 
   it('keeps an unnamed user on onboarding', () => {
     signIn('student', null);
     expect(check(onboardedGuard)).toBe('/onboarding');
     expect(check(manageUsersGuard)).toBe('/onboarding');
+    expect(check(practiceReviewerGuard)).toBe('/onboarding');
+    expect(check(studentGuard)).toBe('/onboarding');
     expect(check(needsOnboardingGuard)).toBe(true);
   });
 
@@ -51,6 +55,8 @@ describe('session guards', () => {
       signIn(role);
       expect(check(onboardedGuard)).toBe(true);
       expect(check(manageUsersGuard)).toBe(role === 'admin' ? true : '/courses');
+      expect(check(practiceReviewerGuard)).toBe(role === 'student' ? '/courses' : true);
+      expect(check(studentGuard)).toBe(role === 'student' ? true : '/courses');
       expect(check(needsOnboardingGuard)).toBe('/courses');
     }
   });

@@ -1,0 +1,8 @@
+id = "zzz-practice-feature"
+title = "Practice Feature"
+
+[[chapters]]
+id = "portfolio"
+title = "Portfolio"
+open_by_default = true
+lessons = [{ id = "landing", title = "Portfolio landing", type = "practice", duration_min = 45, attachments = ["brief.pdf"] }]

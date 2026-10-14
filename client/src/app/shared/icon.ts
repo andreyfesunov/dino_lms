@@ -30,7 +30,13 @@ type IconName =
   | 'play'
   | 'circle-play'
   | 'external-link'
-  | 'user-plus';
+  | 'user-plus'
+  | 'briefcase-business'
+  | 'paperclip'
+  | 'download'
+  | 'send'
+  | 'check'
+  | 'message-square-text';
 
 const PATHS: Record<IconName, string[]> = {
   'chevron-down': ['m6 9 6 6 6-6'],
@@ -137,6 +143,19 @@ const PATHS: Record<IconName, string[]> = {
     'M19 8v6',
     'M22 11h-6',
   ],
+  'briefcase-business': [
+    'M12 12h.01',
+    'M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2',
+    'M22 13a18.15 18.15 0 0 1-20 0',
+    'M20 7H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z',
+  ],
+  paperclip: [
+    'm21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.2-9.19a4 4 0 0 1 5.65 5.65l-9.2 9.19a2 2 0 0 1-2.82-2.83l8.49-8.48',
+  ],
+  download: ['M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4', 'm7 10 5 5 5-5', 'M12 15V3'],
+  send: ['m22 2-7 20-4-9-9-4Z', 'M22 2 11 13'],
+  check: ['M20 6 9 17l-5-5'],
+  'message-square-text': ['M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z', 'M8 10h8', 'M8 14h6'],
 };
 
 @Component({

@@ -7,11 +7,13 @@ import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
 import { CallLesson } from '../../shared/call-lesson';
 import { CodeBlocks } from '../../shared/code-blocks';
+import { FormsModule } from '@angular/forms';
+import { PracticeAttempt } from '../../core/api.types';
 
 @Component({
   selector: 'app-lesson',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, CallLesson, RouterLink, CodeBlocks],
+  imports: [Icon, CallLesson, RouterLink, CodeBlocks, FormsModule],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
@@ -45,6 +47,9 @@ import { CodeBlocks } from '../../shared/code-blocks';
           <h1 class="font-heading text-[26px] font-bold text-text">{{ l.title }}</h1>
           <div class="flex flex-wrap items-center gap-3">
             <p class="font-body text-[13px] text-text-muted">{{ meta() }}</p>
+            @if (l.type === 'practice') {
+              <span class="inline-flex items-center gap-1 rounded-full bg-[#FEF3C7] px-2.5 py-1 font-body text-[11px] font-semibold text-[#B45309]"><app-icon name="briefcase-business" extra="h-3 w-3" />{{ t('practice-type-label') }}</span>
+            }
             @if (done()) {
               <span
                 class="hidden items-center gap-1.5 rounded-full bg-[#D1FAE5] px-3 py-1 text-[11px] text-[#059669] md:inline-flex"
@@ -149,6 +154,85 @@ import { CodeBlocks } from '../../shared/code-blocks';
           </div>
         }
 
+        @if (l.attachments?.length) {
+          <section class="flex flex-col gap-3">
+            <h2 class="flex items-center gap-2 font-heading text-[17px] font-bold text-text">
+              <app-icon name="paperclip" extra="h-[18px] w-[18px] text-text-secondary" />
+              {{ t('practice-materials') }}
+            </h2>
+            @for (file of l.attachments; track file.file) {
+              <a [href]="file.url" [download]="file.file" class="flex items-center gap-3 rounded-lg border border-border bg-input p-3 hover:border-primary/40">
+                <app-icon name="file-text" extra="h-5 w-5 text-primary" />
+                <span class="min-w-0 flex-1 truncate font-body text-sm font-semibold text-text">{{ file.file }}</span>
+                <app-icon name="download" extra="h-4 w-4 text-text-secondary" />
+              </a>
+            }
+          </section>
+        }
+
+        @if (l.type === 'practice') {
+          <section class="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <h2 class="font-heading text-lg font-bold text-text">{{ t('practice-submit-title') }}</h2>
+              <span class="rounded-full bg-input px-3 py-1 font-body text-xs font-semibold text-text-secondary">
+                {{ practiceAttempts().length ? practiceStatus(practiceAttempts()[0].status) : t('practice-not-submitted') }}
+              </span>
+            </div>
+
+            @if (practiceError()) {
+              <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ practiceError() }}</p>
+            }
+
+            @if (practiceCanSubmit()) {
+              <form class="flex flex-col gap-3" (ngSubmit)="submitPractice()">
+                <label class="flex flex-col gap-1.5 font-body text-sm font-semibold text-text">
+                  {{ t('practice-repository') }}
+                  <input name="repository" type="url" required [(ngModel)]="repositoryUrl" [placeholder]="t('practice-repository-placeholder')" class="rounded-md border border-border bg-input px-3 py-2.5 font-normal text-text outline-none focus:border-primary" />
+                </label>
+                <label class="flex flex-col gap-1.5 font-body text-sm font-semibold text-text">
+                  {{ t('practice-message') }}
+                  <input name="message" type="text" [(ngModel)]="studentMessage" [placeholder]="t('practice-message-placeholder')" class="rounded-md border border-border bg-input px-3 py-2.5 font-normal text-text outline-none focus:border-primary" />
+                </label>
+                <label class="flex flex-col gap-1.5 font-body text-sm font-semibold text-text">
+                  {{ t('practice-report') }}
+                  <textarea name="report" rows="3" [(ngModel)]="studentReport" [placeholder]="t('practice-report-placeholder')" class="resize-y rounded-md border border-border bg-input px-3 py-2.5 font-normal text-text outline-none focus:border-primary"></textarea>
+                </label>
+                <div class="flex justify-end">
+                  <button type="submit" [disabled]="practiceSubmitting()" class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 font-body text-sm font-semibold text-text-inverse disabled:opacity-60">
+                    <app-icon name="send" extra="h-4 w-4" />
+                    {{ practiceSubmitting() ? t('practice-submitting') : t('practice-submit') }}
+                  </button>
+                </div>
+              </form>
+            } @else if (!practiceAttempts().length) {
+              <p class="font-body text-sm text-text-muted">{{ t('practice-load-empty') }}</p>
+            }
+
+            @if (practiceAttempts().length) {
+              <div class="flex flex-col gap-3 border-t border-border pt-4">
+                <h3 class="font-heading text-base font-bold text-text">{{ t('practice-attempt-history') }}</h3>
+                @for (attempt of practiceAttempts(); track attempt.id) {
+                  <article class="flex flex-col gap-2 rounded-md bg-input p-3 sm:p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <span class="font-body text-sm font-semibold text-text">{{ t('practice-attempt-number', { number: attempt.attempt_number }) }}</span>
+                      <span class="rounded-full bg-surface px-2.5 py-1 font-body text-xs font-semibold text-text-secondary">{{ practiceStatus(attempt.status) }}</span>
+                    </div>
+                    <a [href]="attempt.repository_url" target="_blank" rel="noopener noreferrer" class="break-all font-body text-sm text-primary underline">{{ attempt.repository_url }}</a>
+                    @if (attempt.message) { <p class="font-body text-sm text-text-secondary">{{ attempt.message }}</p> }
+                    @if (attempt.report) { <p class="whitespace-pre-wrap font-body text-sm text-text-secondary">{{ attempt.report }}</p> }
+                    @if (attempt.feedback) {
+                      <div class="rounded-md border border-[#F3C978] bg-[#FFF8EC] p-3">
+                        <p class="font-body text-xs font-bold text-text">{{ t('practice-teacher-feedback', { name: attempt.reviewer_name || t('role-teacher') }) }}</p>
+                        <p class="mt-1 whitespace-pre-wrap font-body text-sm text-text-secondary">{{ attempt.feedback }}</p>
+                      </div>
+                    }
+                  </article>
+                }
+              </div>
+            }
+          </section>
+        }
+
         <div class="h-px bg-border"></div>
 
         <div class="lesson-actions flex flex-wrap items-center justify-between gap-3">
@@ -174,7 +258,7 @@ import { CodeBlocks } from '../../shared/code-blocks';
               </a>
             }
           </div>
-          @if (l.type !== 'call') {
+          @if (l.type === 'article') {
             <button
               type="button"
               [disabled]="busy()"
@@ -205,6 +289,13 @@ export class LessonPage {
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly busy = signal(false);
+  readonly practiceAttempts = signal<PracticeAttempt[]>([]);
+  readonly practiceCanSubmit = signal(false);
+  readonly practiceSubmitting = signal(false);
+  readonly practiceError = signal<string | null>(null);
+  repositoryUrl = '';
+  studentMessage = '';
+  studentReport = '';
   private routeIds = { course: '', chapter: '', lesson: '' };
   private loadGeneration = 0;
 
@@ -238,6 +329,14 @@ export class LessonPage {
       if (generation !== this.loadGeneration) return;
       this.lesson.set(lesson);
       this.done.set(lesson.done);
+      if (lesson.type === 'practice') {
+        const result = await this.api.practiceAttempts(lesson.course.id, lesson.chapter.id, lesson.id);
+        if (generation !== this.loadGeneration) return;
+        this.practiceAttempts.set(result.attempts);
+        this.practiceCanSubmit.set(result.can_submit);
+      } else {
+        this.practiceAttempts.set([]);
+      }
     } catch {
       if (generation === this.loadGeneration) this.error.set(this.t('error-generic'));
     } finally {
@@ -289,6 +388,33 @@ export class LessonPage {
       this.error.set(this.t('error-generic'));
     } finally {
       this.busy.set(false);
+    }
+  }
+
+  practiceStatus(status: PracticeAttempt['status']): string {
+    const keys = { submitted: 'practice-status-submitted', revision_requested: 'practice-status-revision', accepted: 'practice-status-accepted' };
+    return this.t(keys[status]);
+  }
+
+  async submitPractice(): Promise<void> {
+    const lesson = this.lesson();
+    if (!lesson || this.practiceSubmitting() || !this.repositoryUrl.trim()) return;
+    this.practiceSubmitting.set(true);
+    this.practiceError.set(null);
+    try {
+      await this.api.submitPractice(lesson.course.id, lesson.chapter.id, lesson.id, {
+        repository_url: this.repositoryUrl.trim(), report: this.studentReport.trim(), message: this.studentMessage.trim(),
+      });
+      const result = await this.api.practiceAttempts(lesson.course.id, lesson.chapter.id, lesson.id);
+      this.practiceAttempts.set(result.attempts);
+      this.practiceCanSubmit.set(result.can_submit);
+      this.repositoryUrl = '';
+      this.studentMessage = '';
+      this.studentReport = '';
+    } catch {
+      this.practiceError.set(this.t('practice-submit-error'));
+    } finally {
+      this.practiceSubmitting.set(false);
     }
   }
 }

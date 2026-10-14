@@ -15,6 +15,7 @@ import (
 	"github.com/andreyfesunov/dino_lms/lms/internal/courses"
 	"github.com/andreyfesunov/dino_lms/lms/internal/db"
 	"github.com/andreyfesunov/dino_lms/lms/internal/httpapi"
+	"github.com/andreyfesunov/dino_lms/lms/internal/practices"
 )
 
 func main() {
@@ -45,11 +46,12 @@ func run(cfg config.Config) error {
 	courseService := courses.NewCourseService(catalog, courses.NewSqliteCourseRepository(pool))
 
 	server := &httpapi.Server{
-		Calls:   calls.New(pool, courseService),
-		Auth:    authService,
-		Courses: courseService,
-		Catalog: catalog,
-		Static:  staticHandler(),
+		Calls:     calls.New(pool, courseService),
+		Auth:      authService,
+		Courses:   courseService,
+		Practices: practices.New(pool),
+		Catalog:   catalog,
+		Static:    staticHandler(),
 	}
 
 	log.Printf("dino_lms listening on http://%s", cfg.Server.Addr)

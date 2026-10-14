@@ -15,6 +15,7 @@ import (
 	"github.com/andreyfesunov/dino_lms/lms/internal/courses"
 	"github.com/andreyfesunov/dino_lms/lms/internal/db"
 	"github.com/andreyfesunov/dino_lms/lms/internal/kernel"
+	"github.com/andreyfesunov/dino_lms/lms/internal/practices"
 )
 
 type fixture struct {
@@ -45,8 +46,21 @@ id = "chapter"
 title = "Chapter"
 lessons = [{ id = "intro", title = "Intro" }]
 `,
+		filepath.Join(root, "courses", "practice-course", "chapter", "assignment.md"): "# Build something\n\nSubmit your work.",
+		filepath.Join(root, "courses", "practice-course", "chapter", "brief.pdf"):     "practice resource",
+		filepath.Join(root, "courses", "practice-course", "config.toml"): `id = "practice-course"
+title = "Practice Course"
+[[chapters]]
+id = "chapter"
+title = "Chapter"
+open_by_default = true
+lessons = [{ id = "assignment", type = "practice", title = "Assignment", attachments = ["brief.pdf"] }]
+`,
 	}
 	for name, content := range files {
+		if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+			t.Fatal(err)
+		}
 		if err := os.WriteFile(name, []byte(content), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -58,6 +72,7 @@ lessons = [{ id = "intro", title = "Intro" }]
 		Courses: courses.NewCourseService(catalog, courses.NewSqliteCourseRepository(pool)),
 	}
 	s.Calls = calls.New(pool, s.Courses)
+	s.Practices = practices.New(pool)
 	return &fixture{t: t, server: s, handler: NewMux(s)}
 }
 

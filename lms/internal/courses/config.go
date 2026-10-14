@@ -46,10 +46,11 @@ type ChapterConfig struct {
 
 // LessonConfig declares one markdown lesson.
 type LessonConfig struct {
-	Type        string  `toml:"type"`
-	ID          string  `toml:"id"`
-	Title       string  `toml:"title"`
-	DurationMin *uint32 `toml:"duration_min"`
+	Type        string   `toml:"type"`
+	ID          string   `toml:"id"`
+	Title       string   `toml:"title"`
+	DurationMin *uint32  `toml:"duration_min"`
+	Attachments []string `toml:"attachments"`
 }
 
 // LoadCourseConfig parses and validates `{bundleDir}/config.toml`.
@@ -99,7 +100,7 @@ func (c *CourseConfig) validate(bundleDir string) error {
 		}
 		lessonIDs := map[string]bool{}
 		for _, lesson := range chapter.Lessons {
-			if lesson.Type != "" && lesson.Type != "article" && lesson.Type != "call" {
+			if lesson.Type != "" && lesson.Type != "article" && lesson.Type != "call" && lesson.Type != "practice" {
 				return ConfigError(path, "unknown lesson type: "+lesson.Type)
 			}
 			if !IsValidSlug(lesson.ID) {
@@ -109,6 +110,9 @@ func (c *CourseConfig) validate(bundleDir string) error {
 				return ConfigError(path, fmt.Sprintf("duplicate lesson id `%s.%s`", chapter.ID, lesson.ID))
 			}
 			lessonIDs[lesson.ID] = true
+			if lesson.Type != "practice" && len(lesson.Attachments) > 0 {
+				return ConfigError(path, fmt.Sprintf("attachments are only supported for practice lessons (`%s.%s`)", chapter.ID, lesson.ID))
+			}
 			if lesson.Type == "call" {
 				continue
 			}
@@ -116,6 +120,16 @@ func (c *CourseConfig) validate(bundleDir string) error {
 			info, err := os.Stat(file)
 			if err != nil || info.IsDir() {
 				return ConfigError(path, fmt.Sprintf("lesson file `%s` is missing (expected %s)", lesson.ID, file))
+			}
+			for _, attachment := range lesson.Attachments {
+				if attachment == "" || attachment == "." || attachment == ".." || strings.ContainsAny(attachment, `/\\:`) || filepath.Base(attachment) != attachment {
+					return ConfigError(path, fmt.Sprintf("invalid attachment `%s` for lesson `%s.%s`", attachment, chapter.ID, lesson.ID))
+				}
+				attachmentPath := filepath.Join(bundleDir, chapter.ID, attachment)
+				attachmentInfo, err := os.Stat(attachmentPath)
+				if err != nil || !attachmentInfo.Mode().IsRegular() {
+					return ConfigError(path, fmt.Sprintf("attachment `%s` is missing or not a file (expected %s)", attachment, attachmentPath))
+				}
 			}
 		}
 	}

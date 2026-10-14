@@ -7,7 +7,7 @@ import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
 import { Icon } from './icon';
 
-type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
+type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
 
 @Component({
   selector: 'app-sidebar',
@@ -84,6 +84,15 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             [class]="navItemClass(isActive('calls'))"
           >
             <app-icon name="clock" /><span class="hidden lg:inline">{{ t('nav-calls') }}</span>
+          </a>
+
+          <a
+            [routerLink]="session.seesAllCourses() ? '/practices' : '/my-practices'"
+            [attr.aria-label]="t(practiceNavLabel())"
+            class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 lg:justify-start"
+            [class]="navItemClass(isActive('practices'))"
+          >
+            <app-icon name="briefcase-business" /><span class="hidden lg:inline">{{ t(practiceNavLabel()) }}</span>
           </a>
         </div>
 
@@ -165,6 +174,14 @@ type NavId = 'courses' | 'calls' | 'users' | 'settings' | null;
             t('nav-calls')
           }}</span>
         </a>
+        <a
+          [routerLink]="session.seesAllCourses() ? '/practices' : '/my-practices'"
+          class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
+          [class]="isActive('practices') ? 'text-primary' : 'text-text-secondary'"
+        >
+          <app-icon name="briefcase-business" extra="h-5 w-5" />
+          <span class="font-body text-[11px]">{{ t(practiceNavLabel()) }}</span>
+        </a>
         @if (session.isAdmin()) {
           <a
             routerLink="/students/new"
@@ -230,6 +247,9 @@ export class Sidebar {
     if (id === 'settings') {
       return url === '/settings';
     }
+    if (id === 'practices') {
+      return url === '/practices' || url.startsWith('/practices/') || url === '/my-practices';
+    }
     return url === '/courses' || url.startsWith('/courses/');
   }
 
@@ -256,6 +276,10 @@ export class Sidebar {
 
   tone(active: boolean): string {
     return active ? 'text-text-inverse' : 'text-text-secondary';
+  }
+
+  practiceNavLabel(): string {
+    return this.session.seesAllCourses() ? 'practice-nav-review' : 'practice-nav-student';
   }
 
   back(): void {

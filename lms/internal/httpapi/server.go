@@ -13,15 +13,17 @@ import (
 	"github.com/andreyfesunov/dino_lms/lms/internal/calls"
 	"github.com/andreyfesunov/dino_lms/lms/internal/courses"
 	"github.com/andreyfesunov/dino_lms/lms/internal/kernel"
+	"github.com/andreyfesunov/dino_lms/lms/internal/practices"
 )
 
 // Server carries the wired services for the HTTP handlers.
 type Server struct {
-	Calls   *calls.Service
-	Auth    *auth.AuthService
-	Courses *courses.CourseService
-	Catalog *courses.Catalog
-	Static  http.Handler // client bundle (Angular dist); optional in dev
+	Calls     *calls.Service
+	Auth      *auth.AuthService
+	Courses   *courses.CourseService
+	Practices *practices.Service
+	Catalog   *courses.Catalog
+	Static    http.Handler // client bundle (Angular dist); optional in dev
 }
 
 // The browser sends sid automatically; client JavaScript cannot read this HttpOnly cookie.
@@ -60,6 +62,14 @@ func writeError(w http.ResponseWriter, err error) {
 			status = http.StatusConflict
 		}
 		writeJSON(w, status, map[string]string{"code": callErr.Code})
+	case errors.Is(err, practices.ErrForbidden):
+		writeJSON(w, http.StatusForbidden, map[string]string{"code": "forbidden"})
+	case errors.Is(err, practices.ErrNotFound):
+		writeJSON(w, http.StatusNotFound, map[string]string{"code": "not_found"})
+	case errors.Is(err, practices.ErrConflict):
+		writeJSON(w, http.StatusConflict, map[string]string{"code": "conflict"})
+	case errors.Is(err, practices.ErrInvalid):
+		writeJSON(w, http.StatusBadRequest, map[string]string{"code": "bad_request"})
 	case errors.As(err, &authErr):
 		status := http.StatusBadRequest
 		switch authErr.Code {

@@ -94,13 +94,19 @@ func TestSkipsInvalidBundles(t *testing.T) {
 
 func TestTypedLessonsAndMarkdownCompatibility(t *testing.T) {
 	root := t.TempDir()
-	writeCourse(t, root, "sample", `lessons = [{id="intro",title="Article"},{id="consultation",title="Call",type="call"}]`)
+	writeCourse(t, root, "sample", `lessons = [{id="intro",title="Article"},{id="consultation",title="Call",type="call"},{id="second",title="Practice",type="practice",attachments=["brief.pdf"]}]`)
+	if err := writeFile(filepath.Join(root, "sample", "ch1", "brief.pdf"), "brief"); err != nil {
+		t.Fatal(err)
+	}
 	config, err := LoadCourseConfig(filepath.Join(root, "sample"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if config.Lesson("ch1", "intro").Kind() != "article" || config.Lesson("ch1", "consultation").Kind() != "call" {
+	if config.Lesson("ch1", "intro").Kind() != "article" || config.Lesson("ch1", "consultation").Kind() != "call" || config.Lesson("ch1", "second").Kind() != "practice" {
 		t.Fatal("wrong lesson types")
+	}
+	if len(config.Lesson("ch1", "second").Attachments) != 1 || config.Lesson("ch1", "second").Attachments[0] != "brief.pdf" {
+		t.Fatal("practice attachment not parsed")
 	}
 	writeCourse(t, root, "unknown", `lessons = [{id="intro",type="unknown"}]`)
 	if _, err = LoadCourseConfig(filepath.Join(root, "unknown")); err == nil {
@@ -109,6 +115,18 @@ func TestTypedLessonsAndMarkdownCompatibility(t *testing.T) {
 	writeCourse(t, root, "missing", `lessons = [{id="absent",type="article"}]`)
 	if _, err = LoadCourseConfig(filepath.Join(root, "missing")); err == nil {
 		t.Fatal("article without markdown accepted")
+	}
+	writeCourse(t, root, "missing-attachment", `lessons = [{id="intro",type="practice",attachments=["missing.pdf"]}]`)
+	if _, err = LoadCourseConfig(filepath.Join(root, "missing-attachment")); err == nil {
+		t.Fatal("practice with missing attachment accepted")
+	}
+	writeCourse(t, root, "invalid-attachment", `lessons = [{id="intro",type="practice",attachments=["../secret.pdf"]}]`)
+	if _, err = LoadCourseConfig(filepath.Join(root, "invalid-attachment")); err == nil {
+		t.Fatal("practice attachment path traversal accepted")
+	}
+	writeCourse(t, root, "article-attachment", `lessons = [{id="intro",type="article",attachments=["intro.md"]}]`)
+	if _, err = LoadCourseConfig(filepath.Join(root, "article-attachment")); err == nil {
+		t.Fatal("article attachment accepted")
 	}
 }
 

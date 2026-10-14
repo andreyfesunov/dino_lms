@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -243,7 +244,8 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 			"type": "call", "course": map[string]string{"id": course.ID, "title": course.Title},
 			"chapter": map[string]string{"id": chapter.ID, "title": chapter.Title}, "id": lessonID, "title": lesson.Title,
 			"durationMin": lesson.DurationMin, "html": "", "videos": []mediaVideo{}, "youtube": []mediaYoutube{},
-			"done": containsString(completed, courses.LessonKey(chapterID, lessonID)), "index": ref.Index, "total": course.TotalLessons(),
+			"attachments": []mediaAttachment{},
+			"done":        containsString(completed, courses.LessonKey(chapterID, lessonID)), "index": ref.Index, "total": course.TotalLessons(),
 			"prev": toNav(courseID, prev), "next": toNav(courseID, next), "state": string(state),
 		})
 		return
@@ -285,6 +287,10 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 		}
 		youtube = append(youtube, out)
 	}
+	attachments := []mediaAttachment{}
+	for _, file := range lesson.Attachments {
+		attachments = append(attachments, mediaAttachment{URL: "/media/courses/" + courseID + "/" + chapterID + "/" + url.PathEscape(file), File: file})
+	}
 
 	title := lesson.Title
 	if title == "" {
@@ -300,6 +306,7 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 		"html":                  parsed.HTML,
 		"videos":                videos,
 		"youtube":               youtube,
+		"attachments":           attachments,
 		"done":                  containsString(completed, courses.LessonKey(chapterID, lessonID)),
 		"chapter_index":         chapterIndex,
 		"chapter_lesson_index":  chapterLessonIndex,
@@ -313,6 +320,11 @@ func (s *Server) handleLesson(w http.ResponseWriter, r *http.Request) {
 }
 
 type mediaVideo struct {
+	URL  string `json:"url"`
+	File string `json:"file"`
+}
+
+type mediaAttachment struct {
 	URL  string `json:"url"`
 	File string `json:"file"`
 }

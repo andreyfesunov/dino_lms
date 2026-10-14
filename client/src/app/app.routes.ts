@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { manageUsersGuard, needsOnboardingGuard, onboardedGuard } from './core/guards';
+import { manageUsersGuard, needsOnboardingGuard, onboardedGuard, practiceReviewerGuard, studentGuard } from './core/guards';
 import { Shell } from './shared/shell';
 
 export const routes: Routes = [
@@ -32,6 +32,16 @@ export const routes: Routes = [
         path: 'courses/:courseId/:chapterId/:lessonId',
         canActivate: [onboardedGuard],
         loadComponent: () => import('./pages/lesson/lesson.page').then((m) => m.LessonPage),
+      },
+      {
+        path: 'practices',
+        canActivate: [practiceReviewerGuard],
+        loadComponent: () => import('./pages/practices-review/practices-review.page').then((m) => m.PracticesReviewPage),
+      },
+      {
+        path: 'my-practices',
+        canActivate: [studentGuard],
+        loadComponent: () => import('./pages/my-practices/my-practices.page').then((m) => m.MyPracticesPage),
       },
       {
         path: 'users',

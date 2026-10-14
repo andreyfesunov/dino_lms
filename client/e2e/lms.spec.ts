@@ -435,3 +435,74 @@ test('call lesson availability, booking, changes, cancellation and completion', 
   await studentContext.close();
   await teacherContext.close();
 });
+
+test('practice materials, review, revision history and student progress', async ({ page, browser }) => {
+  await page.goto('/login');
+  await page.locator('[name="login"]').fill('admin@example.test');
+  await page.locator('[name="password"]').fill('correct horse');
+  await page.locator('button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/courses$/);
+
+  const createAccount = async (login: string, role: string, firstName: string) => {
+    const created = await page.request.post('/api/students', { data: { login, password: 'practice password' } });
+    expect(created.ok()).toBeTruthy();
+    const user = await created.json();
+    const updated = await page.request.post(`/api/users/${user.id}`, {
+      data: { role, status: 'active', first_name: firstName, last_name: 'Practice' },
+    });
+    expect(updated.ok()).toBeTruthy();
+    return user;
+  };
+  const student = await createAccount('practice.student@example.test', 'student', 'Practice Student');
+  await createAccount('practice.teacher@example.test', 'teacher', 'Practice Teacher');
+  const courseId = 'zzz-practice-feature';
+  expect((await page.request.post(`/api/courses/${courseId}/students/${student.id}`, { data: {} })).ok()).toBeTruthy();
+
+  const studentContext = await browser.newContext({ locale: 'en-US' });
+  const studentPage = await studentContext.newPage();
+  await studentPage.goto('http://localhost:4201/login');
+  await studentPage.locator('[name="login"]').fill('practice.student@example.test');
+  await studentPage.locator('[name="password"]').fill('practice password');
+  await studentPage.locator('button[type="submit"]').click();
+  await expect(studentPage).toHaveURL(/\/courses$/);
+  const lessonPath = `/courses/${courseId}/portfolio/landing`;
+  await studentPage.goto(lessonPath);
+  await expect(studentPage.locator('app-lesson')).toContainText('Build a responsive portfolio landing page');
+  await expect(studentPage.locator('app-lesson a[download="brief.pdf"]')).toBeVisible();
+  await studentPage.locator('[name="repository"]').fill('https://example.test/project-v1');
+  await studentPage.locator('[name="report"]').fill('First draft');
+  await studentPage.getByRole('button', { name: 'Submit work', exact: true }).click();
+  await expect(studentPage.locator('app-lesson')).toContainText('In review');
+
+  const teacherContext = await browser.newContext({ locale: 'en-US' });
+  const teacherPage = await teacherContext.newPage();
+  await teacherPage.goto('http://localhost:4201/login');
+  await teacherPage.locator('[name="login"]').fill('practice.teacher@example.test');
+  await teacherPage.locator('[name="password"]').fill('practice password');
+  await teacherPage.locator('button[type="submit"]').click();
+  await expect(teacherPage).toHaveURL(/\/courses$/);
+  await teacherPage.goto('/practices');
+  await teacherPage.locator('select').selectOption(courseId);
+  await expect(teacherPage.locator('app-practices-review-page')).toContainText('Practice Student');
+  await teacherPage.locator('textarea').fill('Please add a mobile layout.');
+  await teacherPage.getByRole('button', { name: 'Request revision', exact: true }).click();
+
+  await studentPage.goto(lessonPath);
+  await expect(studentPage.locator('app-lesson')).toContainText('Please add a mobile layout.');
+  await studentPage.locator('[name="repository"]').fill('https://example.test/project-v2');
+  await studentPage.getByRole('button', { name: 'Submit work', exact: true }).click();
+  await expect(studentPage.locator('app-lesson')).toContainText('Attempt 2');
+
+  await teacherPage.goto('/practices');
+  await teacherPage.locator('select').selectOption(courseId);
+  await teacherPage.getByRole('button', { name: 'Accept', exact: true }).click();
+  await studentPage.goto('/my-practices');
+  await expect(studentPage.locator('app-my-practices-page')).toContainText('Accepted');
+  await expect(studentPage.locator('app-my-practices-page')).toContainText('Attempts: 2');
+  expect((await studentPage.request.get(`/api/courses/${courseId}`)).status()).toBe(200);
+  const detail = await (await studentPage.request.get(`/api/courses/${courseId}`)).json();
+  expect(detail.course.progress).toBe(100);
+
+  await teacherContext.close();
+  await studentContext.close();
+});

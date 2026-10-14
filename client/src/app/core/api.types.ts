@@ -30,7 +30,7 @@ export interface CourseListItem {
 }
 
 export interface LessonEntry {
-  type: 'article' | 'call';
+  type: 'article' | 'call' | 'practice';
   chapter_id: string;
   id: string;
   title: string;
@@ -60,7 +60,7 @@ export interface LessonNav {
 }
 
 export interface LessonResponse {
-  type: 'article' | 'call';
+  type: 'article' | 'call' | 'practice';
   course: { id: string; title: string };
   chapter: { id: string; title: string };
   id: string;
@@ -74,6 +74,7 @@ export interface LessonResponse {
     channel: string;
     thumbnail: string | null;
   }[];
+  attachments: { url: string; file: string }[];
   done: boolean;
   chapter_index: number;
   chapter_lesson_index: number;
@@ -82,6 +83,47 @@ export interface LessonResponse {
   total: number;
   prev: LessonNav | null;
   next: LessonNav | null;
+}
+
+export type PracticeStatus = 'submitted' | 'revision_requested' | 'accepted';
+
+export interface PracticeAttempt {
+  id: string;
+  student_id: string;
+  student_name: string;
+  student_login: string;
+  course_id: string;
+  course_title?: string;
+  chapter_id: string;
+  chapter_title?: string;
+  lesson_id: string;
+  lesson_title?: string;
+  attempt_number: number;
+  repository_url: string;
+  report: string;
+  message: string;
+  status: PracticeStatus;
+  feedback: string;
+  submitted_at: number;
+  reviewed_by: string | null;
+  reviewer_name: string | null;
+  reviewed_at: number | null;
+}
+
+export interface PracticeStudentProgress {
+  id: string;
+  name: string;
+  login: string;
+  progress: number;
+  chapters: { id: string; title: string; progress: number; done: number; total: number }[];
+}
+
+export interface PracticeDashboard {
+  course: { id: string; title: string };
+  metrics: { students: number; average_progress: number; pending: number; accepted_this_week: number };
+  students: PracticeStudentProgress[];
+  pending: PracticeAttempt[];
+  recent: PracticeAttempt[];
 }
 
 export interface CallKey {
