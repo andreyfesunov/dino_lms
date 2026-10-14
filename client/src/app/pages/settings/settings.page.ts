@@ -6,11 +6,12 @@ import { ApiService, ApiError } from '../../core/api.service';
 import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
+import { Skeleton, Spinner } from '../../shared/loading';
 
 @Component({
   selector: 'app-settings',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon],
+  imports: [FormsModule, Icon, Skeleton, Spinner],
   template: `
     <section class="design-page">
       <div class="flex flex-col gap-1">
@@ -106,6 +107,9 @@ import { Icon } from '../../shared/icon';
           [disabled]="form.invalid || busy()"
           class="mt-2 inline-flex h-12 w-full md:w-fit items-center justify-center rounded-md bg-primary px-6 font-body text-[15px] font-semibold text-text-inverse hover:bg-inverse disabled:opacity-50"
         >
+          @if (busy()) {
+            <app-spinner />
+          }
           {{ t('settings-save') }}
         </button>
       </form>
@@ -136,55 +140,73 @@ import { Icon } from '../../shared/icon';
             type="button"
             (click)="loadSessions()"
             [disabled]="sessionsBusy()"
-            class="rounded-md border border-border px-4 py-2 text-sm text-text disabled:opacity-50"
+            class="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm text-text disabled:opacity-50"
           >
+            @if (sessionsAction() === 'refresh') {
+              <app-spinner />
+            }
             {{ t('sessions-refresh') }}
           </button>
           <button
             type="button"
             (click)="revokeOthers()"
             [disabled]="sessionsBusy() || !hasOtherSessions()"
-            class="rounded-md border border-danger/30 px-4 py-2 text-sm text-danger disabled:opacity-50"
+            class="inline-flex items-center gap-2 rounded-md border border-danger/30 px-4 py-2 text-sm text-danger disabled:opacity-50"
           >
+            @if (sessionsAction() === 'others') {
+              <app-spinner />
+            }
             {{ t('sessions-revoke-others') }}
           </button>
         </div>
         @if (sessionsError()) {
           <p role="alert" class="text-sm text-danger">{{ sessionsError() }}</p>
         }
-        @if (sessionsBusy()) {
-          <p role="status" class="text-sm text-text-secondary">{{ t('sessions-loading') }}</p>
-        }
         <ul class="flex flex-col gap-3" [attr.aria-busy]="sessionsBusy()">
-          @for (item of sessions(); track item.id) {
-            <li
-              class="flex flex-col gap-3 rounded-md border border-border p-4 sm:flex-row sm:items-start sm:justify-between"
-            >
-              <div class="min-w-0 space-y-2">
-                @if (item.current) {
-                  <p class="text-sm font-semibold text-primary">{{ t('sessions-current') }}</p>
-                }
-                <p class="break-words text-sm text-text">
-                  {{ item.user_agent || t('sessions-unknown-browser') }}
-                </p>
-                @if (item.created_at) {
-                  <p class="text-xs text-text-secondary">
-                    {{ t('sessions-created') }} {{ sessionDate(item.created_at) }}
-                  </p>
-                }
-                <p class="text-xs text-text-secondary">
-                  {{ t('sessions-expires') }} {{ sessionDate(item.expires_at) }}
-                </p>
-              </div>
-              <button
-                type="button"
-                (click)="revoke(item)"
-                [disabled]="sessionsBusy()"
-                class="shrink-0 self-start rounded-md border border-danger/30 px-3 py-2 text-sm text-danger disabled:opacity-50"
-              >
-                {{ t(item.current ? 'sessions-sign-out' : 'sessions-revoke') }}
-              </button>
+          @if (sessionsBusy() && !sessions().length) {
+            <li role="status" [attr.aria-label]="t('sessions-loading')" class="flex flex-col gap-3">
+              @for (row of [1, 2]; track row) {
+                <div class="flex flex-col gap-3 rounded-md border border-border p-4">
+                  <app-skeleton class="h-4 w-2/3 rounded" /><app-skeleton
+                    class="h-3 w-1/3 rounded"
+                  /><app-skeleton class="h-8 w-24 rounded-md" />
+                </div>
+              }
             </li>
+          } @else {
+            @for (item of sessions(); track item.id) {
+              <li
+                class="flex flex-col gap-3 rounded-md border border-border p-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div class="min-w-0 space-y-2">
+                  @if (item.current) {
+                    <p class="text-sm font-semibold text-primary">{{ t('sessions-current') }}</p>
+                  }
+                  <p class="break-words text-sm text-text">
+                    {{ item.user_agent || t('sessions-unknown-browser') }}
+                  </p>
+                  @if (item.created_at) {
+                    <p class="text-xs text-text-secondary">
+                      {{ t('sessions-created') }} {{ sessionDate(item.created_at) }}
+                    </p>
+                  }
+                  <p class="text-xs text-text-secondary">
+                    {{ t('sessions-expires') }} {{ sessionDate(item.expires_at) }}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  (click)="revoke(item)"
+                  [disabled]="sessionsBusy()"
+                  class="inline-flex shrink-0 items-center gap-2 self-start rounded-md border border-danger/30 px-3 py-2 text-sm text-danger disabled:opacity-50"
+                >
+                  @if (sessionsAction() === item.id) {
+                    <app-spinner extra="h-3.5 w-3.5 animate-spin" />
+                  }
+                  {{ t(item.current ? 'sessions-sign-out' : 'sessions-revoke') }}
+                </button>
+              </li>
+            }
           }
         </ul>
       </section>
@@ -205,6 +227,7 @@ export class SettingsPage {
   readonly sessions = signal<AccountSession[]>([]);
   readonly sessionsBusy = signal(false);
   readonly sessionsError = signal<string | null>(null);
+  readonly sessionsAction = signal('');
 
   constructor() {
     void this.loadSessions();
@@ -221,6 +244,7 @@ export class SettingsPage {
   async loadSessions(): Promise<void> {
     if (this.sessionsBusy()) return;
     this.sessionsBusy.set(true);
+    this.sessionsAction.set('refresh');
     this.sessionsError.set(null);
     try {
       this.sessions.set((await this.api.sessions()).sessions);
@@ -228,12 +252,14 @@ export class SettingsPage {
       this.sessionsError.set(this.t('error-generic'));
     } finally {
       this.sessionsBusy.set(false);
+      this.sessionsAction.set('');
     }
   }
 
   async revoke(item: AccountSession): Promise<void> {
     if (this.sessionsBusy()) return;
     this.sessionsBusy.set(true);
+    this.sessionsAction.set(item.id);
     this.sessionsError.set(null);
     try {
       await this.api.revokeSession(item.id);
@@ -246,12 +272,14 @@ export class SettingsPage {
       this.sessionsError.set(this.t('error-generic'));
     } finally {
       this.sessionsBusy.set(false);
+      this.sessionsAction.set('');
     }
   }
 
   async revokeOthers(): Promise<void> {
     if (this.sessionsBusy()) return;
     this.sessionsBusy.set(true);
+    this.sessionsAction.set('others');
     this.sessionsError.set(null);
     try {
       await this.api.revokeOtherSessions();
@@ -260,6 +288,7 @@ export class SettingsPage {
       this.sessionsError.set(this.t('error-generic'));
     } finally {
       this.sessionsBusy.set(false);
+      this.sessionsAction.set('');
     }
   }
   readonly locale = this.i18n.locale;

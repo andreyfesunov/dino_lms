@@ -4,11 +4,12 @@ import { RouterLink } from '@angular/router';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
+import { Spinner } from '../../shared/loading';
 
 @Component({
   selector: 'app-create-student',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon, RouterLink],
+  imports: [FormsModule, Icon, RouterLink, Spinner],
   template: `
     <section class="design-page">
       <div class="flex items-center justify-between gap-4">
@@ -78,6 +79,9 @@ import { Icon } from '../../shared/icon';
             [disabled]="form.invalid || busy()"
             class="inline-flex h-12 items-center justify-center rounded-md bg-primary px-5 font-body text-[15px] font-semibold text-text-inverse hover:bg-inverse disabled:opacity-50"
           >
+            @if (busy()) {
+              <app-spinner />
+            }
             {{ t('students-create') }}
           </button>
           @if (temporaryPassword()) {

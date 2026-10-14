@@ -7,10 +7,11 @@ import { I18nService } from '../core/i18n.service';
 import { RouterLink } from '@angular/router';
 import { CallSlots } from './call-slots';
 import { localCallInput, localCallTime } from './call-time';
+import { Spinner } from './loading';
 
 @Component({
   selector: 'app-call-card',
-  imports: [FormsModule, CallSlots, RouterLink],
+  imports: [FormsModule, CallSlots, RouterLink, Spinner],
   template: `
     <article class="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
       <div class="flex flex-wrap items-start justify-between gap-2">
@@ -41,6 +42,11 @@ import { localCallInput, localCallTime } from './call-time';
       }
       @if (error()) {
         <p role="alert" class="text-danger">{{ error() }}</p>
+      }
+      @if (busy()) {
+        <p role="status" class="flex items-center gap-2 text-sm text-text-muted">
+          <app-spinner />{{ t('calls-loading') }}
+        </p>
       }
       @if (call().status === 'scheduled') {
         <div class="flex flex-wrap gap-2">
@@ -74,10 +80,13 @@ import { localCallInput, localCallTime } from './call-time';
             @if (ended()) {
               <button
                 type="button"
-                class="rounded-md bg-primary px-3 py-2 text-text-inverse"
+                class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-text-inverse disabled:opacity-50"
                 [disabled]="busy()"
                 (click)="change('complete')"
               >
+                @if (busy()) {
+                  <app-spinner />
+                }
                 {{ t('calls-complete') }}
               </button>
             }
@@ -88,10 +97,13 @@ import { localCallInput, localCallTime } from './call-time';
         <p>{{ t('calls-cancel-confirm') }}</p>
         <button
           type="button"
-          class="w-fit rounded-md bg-danger px-3 py-2 text-white"
+          class="inline-flex w-fit items-center gap-2 rounded-md bg-danger px-3 py-2 text-white"
           [disabled]="busy()"
           (click)="change('cancel')"
         >
+          @if (busy()) {
+            <app-spinner />
+          }
           {{ t('calls-confirm') }}
         </button>
       }
@@ -106,10 +118,13 @@ import { localCallInput, localCallTime } from './call-time';
         /></label>
         <button
           type="button"
-          class="w-fit rounded-md bg-primary px-3 py-2 text-text-inverse"
+          class="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-3 py-2 text-text-inverse"
           [disabled]="busy()"
           (click)="change('link', { meeting_url: url })"
         >
+          @if (busy()) {
+            <app-spinner />
+          }
           {{ t('calls-save') }}
         </button>
       }
@@ -124,10 +139,13 @@ import { localCallInput, localCallTime } from './call-time';
           /></label>
           <button
             type="button"
-            class="w-fit rounded-md bg-primary px-3 py-2 text-text-inverse"
+            class="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-3 py-2 text-text-inverse"
             [disabled]="busy() || !start"
             (click)="move()"
           >
+            @if (busy()) {
+              <app-spinner />
+            }
             {{ t('calls-confirm') }}
           </button>
         } @else {

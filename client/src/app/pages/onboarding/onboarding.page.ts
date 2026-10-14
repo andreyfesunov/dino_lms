@@ -6,11 +6,12 @@ import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
 import { DinoLogo } from '../../shared/dino-logo';
 import { Icon } from '../../shared/icon';
+import { Spinner } from '../../shared/loading';
 
 @Component({
   selector: 'app-onboarding',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DinoLogo, Icon],
+  imports: [FormsModule, DinoLogo, Icon, Spinner],
   template: `
     <div class="flex min-h-screen items-center justify-center bg-surface px-5 py-8 md:bg-bg">
       <section class="w-full max-w-[480px] bg-surface md:rounded-xl md:p-10">
@@ -80,6 +81,9 @@ import { Icon } from '../../shared/icon';
             [disabled]="form.invalid || busy()"
             class="mt-2 inline-flex h-12 w-full items-center justify-center rounded-md bg-primary font-body text-[15px] font-semibold text-text-inverse hover:bg-inverse"
           >
+            @if (busy()) {
+              <app-spinner />
+            }
             {{ t('onboarding-continue') }}
           </button>
         </form>

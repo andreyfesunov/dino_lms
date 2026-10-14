@@ -3,10 +3,11 @@ import { CallBooking } from '../../core/api.types';
 import { ApiService } from '../../core/api.service';
 import { I18nService } from '../../core/i18n.service';
 import { CallCard } from '../../shared/call-card';
+import { Skeleton, Spinner } from '../../shared/loading';
 
 @Component({
   selector: 'app-calls',
-  imports: [CallCard],
+  imports: [CallCard, Skeleton, Spinner],
   template: `
     <section class="design-page">
       <h1 class="font-heading text-2xl md:text-[28px] font-semibold">{{ t('nav-calls') }}</h1>
@@ -25,17 +26,38 @@ import { CallCard } from '../../shared/call-card';
             {{ t('calls-tab-' + tab) }}
           </button>
         }
-        <button type="button" class="rounded-md bg-input px-4 py-2" (click)="load()">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-md bg-input px-4 py-2 disabled:opacity-50"
+          [disabled]="loading()"
+          (click)="load()"
+        >
+          @if (loading()) {
+            <app-spinner />
+          }
           {{ t('calls-refresh') }}
         </button>
       </div>
       @if (loading()) {
-        <p role="status">{{ t('calls-loading') }}</p>
+        <div class="flex flex-col gap-3" role="status" [attr.aria-label]="t('calls-loading')">
+          @for (row of [1, 2, 3]; track row) {
+            <div
+              class="flex flex-col gap-3 rounded-lg border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
+              aria-hidden="true"
+            >
+              <div class="flex flex-col gap-2">
+                <app-skeleton class="h-5 w-48 rounded" /><app-skeleton class="h-4 w-64 rounded" />
+              </div>
+              <app-skeleton class="h-9 w-28 rounded-md" />
+            </div>
+          }
+        </div>
+      } @else {
+        @for (call of visible(); track call.id) {
+          <app-call-card [call]="call" (changed)="load()" />
+        }
       }
-      @for (call of visible(); track call.id) {
-        <app-call-card [call]="call" (changed)="load()" />
-      }
-      @if (!loading() && visible().length === 0) {
+      @if (!loading() && !error() && visible().length === 0) {
         <p class="text-text-muted">{{ t('calls-empty') }}</p>
       }
     </section>

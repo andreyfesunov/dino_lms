@@ -14,18 +14,47 @@ import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
 import { StudentPicker } from '../../shared/student-picker';
 import { DialogFocus } from '../../shared/dialog-focus';
+import { Skeleton, Spinner } from '../../shared/loading';
 
 @Component({
   selector: 'app-course-detail',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, RouterLink, StudentPicker, DialogFocus],
+  imports: [Icon, RouterLink, StudentPicker, DialogFocus, Skeleton, Spinner],
   template: `
     @if (error()) {
       <p role="alert" class="rounded-md bg-danger/10 p-4 text-danger">{{ error() }}</p>
     }
     @if (!model() && !error()) {
-      <section class="design-page">
-        <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p>
+      <section
+        class="design-page course-detail"
+        role="status"
+        [attr.aria-label]="t('page-loading')"
+      >
+        <div class="course-header flex flex-col gap-5">
+          <app-skeleton class="h-4 w-24 rounded" />
+          <div class="flex flex-col gap-3">
+            <app-skeleton class="h-8 w-2/3 rounded" />
+            <app-skeleton class="h-4 w-full max-w-3xl rounded" />
+            <app-skeleton class="h-4 w-48 rounded" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <app-skeleton class="h-4 w-full rounded" />
+            <app-skeleton class="h-2 w-full rounded" />
+          </div>
+        </div>
+        <div class="course-chapters flex flex-col gap-3" aria-hidden="true">
+          <app-skeleton class="mb-2 h-6 w-40 rounded" />
+          @for (row of [1, 2, 3, 4]; track row) {
+            <div
+              class="flex items-center gap-3 rounded-md border border-border bg-surface px-4 py-3.5"
+            >
+              <app-skeleton class="h-8 w-8 rounded-md" />
+              <div class="flex flex-1 flex-col gap-2">
+                <app-skeleton class="h-4 w-2/3 rounded" /><app-skeleton class="h-3 w-1/3 rounded" />
+              </div>
+            </div>
+          }
+        </div>
       </section>
     }
     @if (model(); as m) {
@@ -204,7 +233,13 @@ import { DialogFocus } from '../../shared/dialog-focus';
                           class="flex items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-input"
                         >
                           <app-icon
-                            [name]="lesson.type === 'call' ? 'clock' : lesson.type === 'practice' ? 'briefcase-business' : 'file-text'"
+                            [name]="
+                              lesson.type === 'call'
+                                ? 'clock'
+                                : lesson.type === 'practice'
+                                  ? 'briefcase-business'
+                                  : 'file-text'
+                            "
                             extra="h-4 w-4"
                           />
                           <span>{{ lesson.title }}</span>
@@ -292,6 +327,15 @@ import { DialogFocus } from '../../shared/dialog-focus';
                 }
               </div>
               <div class="min-h-0 flex-1 overflow-y-auto px-6 pb-4">
+                @if (accessLoading()) {
+                  <p
+                    role="status"
+                    class="mb-3 flex items-center gap-2 text-sm text-text-muted"
+                    [attr.aria-label]="t('page-loading')"
+                  >
+                    <app-spinner />{{ t('page-loading') }}
+                  </p>
+                }
                 @if (accessError()) {
                   <p role="alert" class="mb-3 text-sm text-danger">{{ accessError() }}</p>
                   <button
@@ -373,9 +417,12 @@ import { DialogFocus } from '../../shared/dialog-focus';
                   role="status"
                   class="flex items-center gap-1 font-body text-[11px] text-text-muted"
                 >
-                  <app-icon name="clock" extra="h-3 w-3" />{{
-                    accessBusy() ? t('access-saving') : t('access-saved-hint')
-                  }}
+                  @if (accessBusy()) {
+                    <app-spinner extra="h-3 w-3 animate-spin" />
+                  } @else {
+                    <app-icon name="clock" extra="h-3 w-3" />
+                  }
+                  {{ accessBusy() ? t('access-saving') : t('access-saved-hint') }}
                 </p>
                 <div class="flex gap-3">
                   @if (studentId()) {
@@ -385,6 +432,9 @@ import { DialogFocus } from '../../shared/dialog-focus';
                       (click)="revokeAccess()"
                       class="font-body text-xs text-danger disabled:opacity-50"
                     >
+                      @if (accessBusy()) {
+                        <app-spinner />
+                      }
                       {{ t('access-revoke') }}
                     </button>
                   }

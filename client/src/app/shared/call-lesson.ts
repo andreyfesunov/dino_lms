@@ -7,14 +7,25 @@ import { I18nService } from '../core/i18n.service';
 import { CallSlots } from './call-slots';
 import { CallCard } from './call-card';
 import { localCallInput, localCallTime } from './call-time';
+import { Spinner } from './loading';
 
 @Component({
   selector: 'app-call-lesson',
-  imports: [FormsModule, CallSlots, CallCard],
+  imports: [FormsModule, CallSlots, CallCard, Spinner],
   template: `
     <div class="flex flex-col gap-5">
       @if (error()) {
         <p role="alert" class="text-danger">{{ error() }}</p>
+      }
+      @if (!settings() && !error()) {
+        <p role="status" class="flex items-center gap-2 text-sm text-text-muted">
+          <app-spinner />{{ t('calls-loading') }}
+        </p>
+      }
+      @if (busy()) {
+        <p role="status" class="flex items-center gap-2 text-sm text-text-muted">
+          <app-spinner />{{ t('calls-loading') }}
+        </p>
       }
       @if (settings(); as cfg) {
         <p class="text-sm text-text-muted">
@@ -125,10 +136,13 @@ import { localCallInput, localCallTime } from './call-time';
               }
               <button
                 type="button"
-                class="w-fit rounded-md bg-primary px-4 py-2 text-text-inverse disabled:opacity-50"
+                class="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-4 py-2 text-text-inverse disabled:opacity-50"
                 [disabled]="busy()"
                 (click)="save()"
               >
+                @if (busy()) {
+                  <app-spinner />
+                }
                 {{ t('calls-save') }}
               </button>
               @if (saved()) {

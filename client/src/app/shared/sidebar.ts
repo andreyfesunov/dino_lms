@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter, map } from 'rxjs';
@@ -6,13 +6,14 @@ import { ApiService } from '../core/api.service';
 import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
 import { Icon } from './icon';
+import { Spinner } from './loading';
 
 type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
 
 @Component({
   selector: 'app-sidebar',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [Icon, RouterLink],
+  imports: [Icon, RouterLink, Spinner],
   template: `
     @if (session.signedIn()) {
       <aside
@@ -92,7 +93,9 @@ type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
             class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 lg:justify-start"
             [class]="navItemClass(isActive('practices'))"
           >
-            <app-icon name="briefcase-business" /><span class="hidden lg:inline">{{ t(practiceNavLabel()) }}</span>
+            <app-icon name="briefcase-business" /><span class="hidden lg:inline">{{
+              t(practiceNavLabel())
+            }}</span>
           </a>
         </div>
 
@@ -117,18 +120,28 @@ type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
           <button
             type="button"
             (click)="logout()"
+            [disabled]="loggingOut()"
             [attr.aria-label]="t('nav-logout')"
-            class="w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 lg:hidden"
+            class="w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 disabled:opacity-50 lg:hidden"
           >
-            <app-icon name="log-out" extra="text-danger" />
+            @if (loggingOut()) {
+              <app-spinner />
+            } @else {
+              <app-icon name="log-out" extra="text-danger" />
+            }
           </button>
           <button
             type="button"
             (click)="logout()"
+            [disabled]="loggingOut()"
             [attr.aria-label]="t('nav-logout')"
-            class="hidden w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 lg:flex"
+            class="hidden w-full items-center gap-3 rounded-md px-3 py-2.5 font-body text-sm font-medium text-danger hover:bg-danger/10 disabled:opacity-50 lg:flex"
           >
-            <app-icon name="log-out" extra="text-danger" />
+            @if (loggingOut()) {
+              <app-spinner />
+            } @else {
+              <app-icon name="log-out" extra="text-danger" />
+            }
             <span>{{ t('nav-logout') }}</span>
           </button>
 
@@ -221,6 +234,7 @@ type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
 })
 export class Sidebar {
   readonly session = inject(SessionStore);
+  readonly loggingOut = signal(false);
   private api = inject(ApiService);
   private i18n = inject(I18nService);
   private router = inject(Router);
@@ -254,6 +268,8 @@ export class Sidebar {
   }
 
   async logout(): Promise<void> {
+    if (this.loggingOut()) return;
+    this.loggingOut.set(true);
     try {
       await this.api.logout();
     } finally {

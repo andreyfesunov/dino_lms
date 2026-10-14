@@ -5,11 +5,12 @@ import { ApiError, ApiService } from '../../core/api.service';
 import { SessionStore } from '../../core/session.store';
 import { I18nService } from '../../core/i18n.service';
 import { DinoLogo } from '../../shared/dino-logo';
+import { Spinner } from '../../shared/loading';
 
 @Component({
   selector: 'app-login',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, DinoLogo],
+  imports: [FormsModule, DinoLogo, Spinner],
   template: `
     <div class="auth-page flex min-h-screen flex-col bg-surface xl:flex-row">
       <aside
@@ -160,6 +161,9 @@ import { DinoLogo } from '../../shared/dino-logo';
               [disabled]="form.invalid || busy()"
               class="inline-flex h-12 w-full items-center justify-center rounded-md bg-primary px-5 font-body text-[15px] font-semibold text-text-inverse hover:bg-inverse focus:outline-none focus:ring-2 focus:ring-primary/40"
             >
+              @if (busy()) {
+                <app-spinner />
+              }
               {{ t('login-submit') }}
             </button>
           </form>

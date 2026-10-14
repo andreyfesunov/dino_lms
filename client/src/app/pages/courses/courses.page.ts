@@ -8,6 +8,7 @@ import { I18nService } from '../../core/i18n.service';
 import { Icon } from '../../shared/icon';
 import { StudentPicker } from '../../shared/student-picker';
 import { DialogFocus } from '../../shared/dialog-focus';
+import { Skeleton, Spinner } from '../../shared/loading';
 
 interface CourseRow {
   course: CourseListItem;
@@ -17,7 +18,7 @@ interface CourseRow {
 @Component({
   selector: 'app-courses',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, Icon, RouterLink, StudentPicker, DialogFocus],
+  imports: [FormsModule, Icon, RouterLink, StudentPicker, DialogFocus, Skeleton, Spinner],
   template: `
     <section class="design-page">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -76,75 +77,94 @@ interface CourseRow {
         </div>
       }
 
-      @if (loading()) {
-        <p role="status" class="text-sm text-text-muted">{{ t('page-loading') }}</p>
-      }
       @if (error()) {
         <p role="alert" class="rounded-md bg-danger/10 p-3 text-sm text-danger">{{ error() }}</p>
       }
-      <div class="grid grid-cols-1 gap-4">
-        @for (row of rows(); track row.course.id) {
-          <a
-            [routerLink]="'/courses/' + row.course.id"
-            class="course-card group flex min-w-0 flex-col justify-between rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-input/40"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <h2 class="font-heading text-lg font-bold text-text group-hover:text-primary">
-                    {{ row.course.title }}
-                  </h2>
-                  <span
-                    class="inline-flex items-center gap-1 rounded px-2 py-0.5 font-body text-[11px] font-semibold"
-                    [class]="badgeClass(row)"
-                  >
-                    <app-icon [name]="badgeIcon(row)" extra="h-3 w-3" />
-                    {{ badgeLabel(row) }}
+      @if (loading()) {
+        <div class="flex flex-col gap-4" role="status" [attr.aria-label]="t('page-loading')">
+          @for (row of [1, 2, 3]; track row) {
+            <div
+              class="flex min-h-[146px] flex-col justify-between rounded-lg border border-border p-5"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex min-w-0 flex-1 flex-col gap-3">
+                  <app-skeleton class="h-6 w-2/5 rounded" />
+                  <app-skeleton class="h-4 w-4/5 rounded" />
+                </div>
+                <app-skeleton class="h-5 w-5 rounded" />
+              </div>
+              <div class="mt-3 flex items-center justify-between gap-3">
+                <app-skeleton class="h-4 w-28 rounded" />
+                <app-skeleton class="h-2 w-40 rounded-full" />
+              </div>
+            </div>
+          }
+        </div>
+      } @else {
+        <div class="grid grid-cols-1 gap-4">
+          @for (row of rows(); track row.course.id) {
+            <a
+              [routerLink]="'/courses/' + row.course.id"
+              class="course-card group flex min-w-0 flex-col justify-between rounded-lg border border-border bg-surface p-5 transition-colors hover:border-primary/40 hover:bg-input/40"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="font-heading text-lg font-bold text-text group-hover:text-primary">
+                      {{ row.course.title }}
+                    </h2>
+                    <span
+                      class="inline-flex items-center gap-1 rounded px-2 py-0.5 font-body text-[11px] font-semibold"
+                      [class]="badgeClass(row)"
+                    >
+                      <app-icon [name]="badgeIcon(row)" extra="h-3 w-3" />
+                      {{ badgeLabel(row) }}
+                    </span>
+                  </div>
+                  @if (row.course.description) {
+                    <p
+                      class="mt-1 max-w-[600px] line-clamp-2 font-body text-[13px] text-text-secondary"
+                    >
+                      {{ row.course.description }}
+                    </p>
+                  }
+                </div>
+                <span class="text-text-muted transition-colors group-hover:text-primary">
+                  <app-icon name="chevron-right" extra="h-5 w-5" />
+                </span>
+              </div>
+              <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-4 text-text-muted">
+                  <span class="flex items-center gap-1.5 font-body text-xs">
+                    <app-icon name="book-open" extra="h-3.5 w-3.5" />
+                    {{ chaptersLabel(row) }}
+                  </span>
+                  @if (row.course.students > 0) {
+                    <span class="flex items-center gap-1.5 font-body text-xs">
+                      <app-icon name="users" extra="h-3.5 w-3.5" />
+                      {{ studentsLabel(row.course.students) }}
+                    </span>
+                  }
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="font-body text-[11px] text-text-muted">
+                    {{ t('courses-progress-label') }}
+                  </span>
+                  <span class="font-body text-[11px] font-semibold text-primary">
+                    {{ row.course.progress }}%
+                  </span>
+                  <span class="inline-block h-1.5 w-32 overflow-hidden rounded-full bg-input">
+                    <span
+                      class="block h-full rounded-full bg-primary"
+                      [style.width.%]="row.course.progress"
+                    ></span>
                   </span>
                 </div>
-                @if (row.course.description) {
-                  <p
-                    class="mt-1 max-w-[600px] line-clamp-2 font-body text-[13px] text-text-secondary"
-                  >
-                    {{ row.course.description }}
-                  </p>
-                }
               </div>
-              <span class="text-text-muted transition-colors group-hover:text-primary">
-                <app-icon name="chevron-right" extra="h-5 w-5" />
-              </span>
-            </div>
-            <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <div class="flex items-center gap-4 text-text-muted">
-                <span class="flex items-center gap-1.5 font-body text-xs">
-                  <app-icon name="book-open" extra="h-3.5 w-3.5" />
-                  {{ chaptersLabel(row) }}
-                </span>
-                @if (row.course.students > 0) {
-                  <span class="flex items-center gap-1.5 font-body text-xs">
-                    <app-icon name="users" extra="h-3.5 w-3.5" />
-                    {{ studentsLabel(row.course.students) }}
-                  </span>
-                }
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="font-body text-[11px] text-text-muted">
-                  {{ t('courses-progress-label') }}
-                </span>
-                <span class="font-body text-[11px] font-semibold text-primary">
-                  {{ row.course.progress }}%
-                </span>
-                <span class="inline-block h-1.5 w-32 overflow-hidden rounded-full bg-input">
-                  <span
-                    class="block h-full rounded-full bg-primary"
-                    [style.width.%]="row.course.progress"
-                  ></span>
-                </span>
-              </div>
-            </div>
-          </a>
-        }
-      </div>
+            </a>
+          }
+        </div>
+      }
 
       @if (modal() === 1 && session.isAdmin()) {
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-[#1B3A28]/40 p-4">
@@ -223,6 +243,9 @@ interface CourseRow {
                 (click)="submitGrant()"
                 class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 font-body text-[13px] font-semibold text-text-inverse hover:bg-inverse disabled:opacity-50"
               >
+                @if (grantBusy()) {
+                  <app-spinner />
+                }
                 <app-icon name="check-circle" extra="h-4 w-4" />{{ t('access-grant-submit') }}
               </button>
             </div>

@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../core/api.service';
 import { CallKey, CallWindow } from '../core/api.types';
 import { I18nService } from '../core/i18n.service';
+import { Spinner } from './loading';
 
 @Component({
   selector: 'app-call-slots',
-  imports: [FormsModule],
+  imports: [FormsModule, Spinner],
   template: `
     <div class="flex flex-col gap-3">
       <p class="text-sm text-text-muted">{{ t('calls-your-zone') }}: {{ zone }}</p>
@@ -24,7 +25,9 @@ import { I18nService } from '../core/i18n.service';
         <p role="alert" class="text-danger">{{ error() }}</p>
       }
       @if (loading()) {
-        <p role="status">{{ t('calls-loading') }}</p>
+        <p role="status" class="flex items-center gap-2 text-sm text-text-muted">
+          <app-spinner />{{ t('calls-loading') }}
+        </p>
       }
       <div class="flex flex-wrap gap-2">
         @for (slot of slots(); track slot.starts_at) {
@@ -38,7 +41,7 @@ import { I18nService } from '../core/i18n.service';
             {{ time(slot.starts_at) }}–{{ time(slot.ends_at) }}
           </button>
         } @empty {
-          @if (!loading()) {
+          @if (!loading() && !error()) {
             <p class="text-sm text-text-muted">{{ t('calls-no-slots') }}</p>
           }
         }
@@ -50,6 +53,9 @@ import { I18nService } from '../core/i18n.service';
           [disabled]="disabled()"
           (click)="chosen.emit(start)"
         >
+          @if (disabled()) {
+            <app-spinner />
+          }
           {{ t('calls-confirm') }} · {{ time(start) }}
         </button>
       }
