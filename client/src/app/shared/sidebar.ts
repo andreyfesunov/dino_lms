@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
 import { ApiService } from '../core/api.service';
 import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
@@ -205,13 +207,20 @@ export class Sidebar {
   private api = inject(ApiService);
   private i18n = inject(I18nService);
   private router = inject(Router);
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map((event) => event.urlAfterRedirects),
+    ),
+    { initialValue: this.router.url },
+  );
 
   t(key: string): string {
     return this.i18n.format(key);
   }
 
   isActive(id: Exclude<NavId, null>): boolean {
-    const url = this.router.url;
+    const url = this.currentUrl().split(/[?#]/, 1)[0];
     if (id === 'calls') {
       return url === '/calls';
     }
