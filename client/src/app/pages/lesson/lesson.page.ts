@@ -86,90 +86,84 @@ import { Skeleton, Spinner } from '../../shared/loading';
             [key]="{ course_id: l.course.id, chapter_id: l.chapter.id, lesson_id: l.id }"
           />
         } @else {
-          <div
-            class="md-body"
-            [appCodeBlocks]="l.html"
-            [articleTitle]="l.title"
-            [innerHTML]="l.html"
-          ></div>
-        }
-
-        @if (l.videos.length > 0) {
-          <div class="flex flex-col gap-3">
-            <h2 class="flex items-center gap-2 font-heading text-[17px] font-bold text-text">
-              <app-icon name="circle-play" extra="h-[18px] w-[18px] text-primary" />
-              {{ t('lesson-video-title') }}
-            </h2>
-            @for (video of l.videos; track video.file) {
-              <figure class="flex flex-col gap-2">
-                <video
-                  [src]="video.url"
-                  controls
-                  preload="metadata"
-                  class="aspect-video w-full rounded-lg bg-black"
-                ></video>
-                <figcaption class="font-body text-sm font-semibold text-text">
-                  {{ l.title }} — {{ video.file }}
-                </figcaption>
-              </figure>
+          @for (block of contentBlocks(l); track $index) {
+            @if (block.type === 'html') {
+              <div
+                class="md-body"
+                [appCodeBlocks]="block.html || ''"
+                [articleTitle]="l.title"
+                [innerHTML]="block.html || ''"
+              ></div>
             }
-          </div>
-        }
 
-        @if (l.youtube.length > 0) {
-          <div class="flex flex-col gap-3">
-            <h2 class="flex items-center gap-2 font-heading text-[17px] font-bold text-text">
-              <app-icon name="external-link" extra="h-[18px] w-[18px] text-text-secondary" />
-              {{ t('lesson-links-title') }}
-            </h2>
-            @for (link of l.youtube; track link.url) {
-              <a
-                [href]="link.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="group flex items-stretch gap-4 rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/40"
-              >
-                <span
-                  class="relative block h-[60px] w-[100px] sm:h-[84px] sm:w-[150px] shrink-0 overflow-hidden rounded-md bg-input"
+            @if (block.type === 'video') {
+              @let video = l.videos[block.index];
+              <div class="flex flex-col gap-3">
+                <figure class="flex flex-col gap-2">
+                  <video
+                    [src]="video.url"
+                    controls
+                    preload="metadata"
+                    class="aspect-video w-full rounded-lg bg-black"
+                  ></video>
+                  <figcaption class="font-body text-sm font-semibold text-text">
+                    {{ l.title }} — {{ video.file }}
+                  </figcaption>
+                </figure>
+              </div>
+            }
+
+            @if (block.type === 'youtube') {
+              @let link = l.youtube[block.index];
+              <div class="flex flex-col gap-3">
+                <a
+                  [href]="link.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group flex items-stretch gap-4 rounded-lg border border-border bg-surface p-3 transition-colors hover:border-primary/40"
                 >
-                  @if (link.thumbnail) {
-                    <img
-                      [src]="link.thumbnail"
-                      alt=""
-                      loading="lazy"
-                      class="h-full w-full object-cover transition-transform group-hover:scale-105"
-                    />
-                  }
-                  <span class="absolute inset-0 flex items-center justify-center">
-                    <span
-                      class="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
-                    >
-                      <app-icon name="play" extra="h-4 w-4" />
+                  <span
+                    class="relative block h-[60px] w-[100px] sm:h-[84px] sm:w-[150px] shrink-0 overflow-hidden rounded-md bg-input"
+                  >
+                    @if (link.thumbnail) {
+                      <img
+                        [src]="link.thumbnail"
+                        alt=""
+                        loading="lazy"
+                        class="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      />
+                    }
+                    <span class="absolute inset-0 flex items-center justify-center">
+                      <span
+                        class="flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-white"
+                      >
+                        <app-icon name="play" extra="h-4 w-4" />
+                      </span>
                     </span>
                   </span>
-                </span>
-                <span class="flex min-w-0 flex-1 flex-col justify-center gap-1">
-                  <span
-                    class="truncate font-body text-sm font-semibold text-text group-hover:text-primary"
-                  >
-                    {{ link.title }}
+                  <span class="flex min-w-0 flex-1 flex-col justify-center gap-1">
+                    <span
+                      class="truncate font-body text-sm font-semibold text-text group-hover:text-primary"
+                    >
+                      {{ link.title }}
+                    </span>
+                    <span class="font-body text-xs text-text-muted">
+                      {{ t('lesson-source-youtube') }}
+                    </span>
+                    @if (link.channel) {
+                      <span class="font-body text-xs text-text-muted">{{ link.channel }}</span>
+                    }
+                    <span
+                      class="inline-flex items-center gap-1 font-body text-xs font-semibold text-primary"
+                    >
+                      <app-icon name="external-link" extra="h-3 w-3" />
+                      {{ t('lesson-open-link') }}
+                    </span>
                   </span>
-                  <span class="font-body text-xs text-text-muted">
-                    {{ t('lesson-source-youtube') }}
-                  </span>
-                  @if (link.channel) {
-                    <span class="font-body text-xs text-text-muted">{{ link.channel }}</span>
-                  }
-                  <span
-                    class="inline-flex items-center gap-1 font-body text-xs font-semibold text-primary"
-                  >
-                    <app-icon name="external-link" extra="h-3 w-3" />
-                    {{ t('lesson-open-link') }}
-                  </span>
-                </span>
-              </a>
+                </a>
+              </div>
             }
-          </div>
+          }
         }
 
         @if (l.attachments?.length) {
@@ -373,6 +367,15 @@ import { Skeleton, Spinner } from '../../shared/loading';
   `,
 })
 export class LessonPage {
+  contentBlocks(lesson: LessonResponse) {
+    return (
+      lesson.blocks ?? [
+        { type: 'html', html: lesson.html, index: 0 },
+        ...lesson.videos.map((_, index) => ({ type: 'video', html: '', index })),
+        ...lesson.youtube.map((_, index) => ({ type: 'youtube', html: '', index })),
+      ]
+    );
+  }
   private api = inject(ApiService);
   private i18n = inject(I18nService);
   private activatedRoute = inject(ActivatedRoute);

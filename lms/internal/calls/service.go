@@ -138,7 +138,7 @@ func (s *Service) Teachers(ctx context.Context, a kernel.Actor) ([]Teacher, erro
 	if !a.HasRole(kernel.RoleAdmin) {
 		return nil, fail("forbidden")
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id,trim(first_name || ' ' || last_name) FROM users WHERE role='teacher' AND status='active' AND length(trim(COALESCE(first_name,'')))>0 AND length(trim(COALESCE(last_name,'')))>0 ORDER BY first_name,last_name`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,trim(first_name || ' ' || last_name) FROM users WHERE role IN ('teacher','admin') AND status='active' AND length(trim(COALESCE(first_name,'')))>0 AND length(trim(COALESCE(last_name,'')))>0 ORDER BY first_name,last_name`)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func (s *Service) SaveSettings(ctx context.Context, a kernel.Actor, k Key, in Se
 	}
 	if in.TeacherID != "" {
 		var n int
-		err = tx.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE id=? AND role='teacher' AND status='active' AND length(trim(COALESCE(first_name,'')))>0 AND length(trim(COALESCE(last_name,'')))>0`, in.TeacherID).Scan(&n)
+		err = tx.QueryRowContext(ctx, `SELECT count(*) FROM users WHERE id=? AND role IN ('teacher','admin') AND status='active' AND length(trim(COALESCE(first_name,'')))>0 AND length(trim(COALESCE(last_name,'')))>0`, in.TeacherID).Scan(&n)
 		if err != nil {
 			return Settings{}, err
 		}

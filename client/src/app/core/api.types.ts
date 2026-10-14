@@ -67,6 +67,7 @@ export interface LessonResponse {
   title: string;
   durationMin: number | null;
   html: string;
+  blocks?: { type: 'html' | 'video' | 'youtube'; html?: string; index: number }[];
   videos: { url: string; file: string }[];
   youtube: {
     url: string;
@@ -120,7 +121,12 @@ export interface PracticeStudentProgress {
 
 export interface PracticeDashboard {
   course: { id: string; title: string };
-  metrics: { students: number; average_progress: number; pending: number; accepted_this_week: number };
+  metrics: {
+    students: number;
+    average_progress: number;
+    pending: number;
+    accepted_this_week: number;
+  };
   students: PracticeStudentProgress[];
   pending: PracticeAttempt[];
   recent: PracticeAttempt[];

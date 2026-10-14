@@ -43,6 +43,15 @@ type ParsedLesson struct {
 	HTML    string
 	Videos  []VideoRef
 	Youtube []YoutubeRef
+	Blocks  []LessonBlock
+}
+
+// LessonBlock keeps rendered text and media in their source order. Index refers
+// to the corresponding Videos or Youtube entry for a media block.
+type LessonBlock struct {
+	Type  string `json:"type"`
+	HTML  string `json:"html,omitempty"`
+	Index int    `json:"index"`
 }
 
 var youtubeIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{11}$`)
@@ -87,24 +96,39 @@ func RenderMarkdown(source string) (string, error) {
 	return buf.String(), nil
 }
 
-// RenderLessonMarkdown renders a lesson: directives are stripped from the
-// markdown and returned separately so the page can build its video/link
-// blocks per design.
+// RenderLessonMarkdown renders text and media in their Markdown source order.
 func RenderLessonMarkdown(source string) (ParsedLesson, error) {
-	text, videos, youtube := parseDirectives(source)
+	text, videos, youtube, blocks := parseDirectives(source)
 	htmlBody, err := RenderMarkdown(text)
 	if err != nil {
 		return ParsedLesson{}, err
 	}
-	return ParsedLesson{HTML: htmlBody, Videos: videos, Youtube: youtube}, nil
+	for i := range blocks {
+		if blocks[i].Type == "html" {
+			blocks[i].HTML, err = RenderMarkdown(blocks[i].HTML)
+			if err != nil {
+				return ParsedLesson{}, err
+			}
+		}
+	}
+	return ParsedLesson{HTML: htmlBody, Videos: videos, Youtube: youtube, Blocks: blocks}, nil
 }
 
 // parseDirectives extracts `{{ video: file }}` and `{{ youtube: URL | Title |
 // Channel }}` directives. Unknown or malformed directives stay literal.
-func parseDirectives(source string) (string, []VideoRef, []YoutubeRef) {
+func parseDirectives(source string) (string, []VideoRef, []YoutubeRef, []LessonBlock) {
 	var videos []VideoRef
 	var youtube []YoutubeRef
 	var text strings.Builder
+	blocks := []LessonBlock{}
+	textStart := 0
+	flush := func() {
+		chunk := text.String()[textStart:]
+		if strings.TrimSpace(chunk) != "" {
+			blocks = append(blocks, LessonBlock{Type: "html", HTML: chunk})
+		}
+		textStart = text.Len()
+	}
 	rest := source
 
 	for {
@@ -131,6 +155,8 @@ func parseDirectives(source string) (string, []VideoRef, []YoutubeRef) {
 		switch strings.ToLower(strings.TrimSpace(kind)) {
 		case "video":
 			if value != "" {
+				flush()
+				blocks = append(blocks, LessonBlock{Type: "video", Index: len(videos)})
 				videos = append(videos, VideoRef{File: value})
 			} else {
 				text.WriteString(rest[start:end])
@@ -154,6 +180,8 @@ func parseDirectives(source string) (string, []VideoRef, []YoutubeRef) {
 				channel := parts[2]
 				ref.Channel = &channel
 			}
+			flush()
+			blocks = append(blocks, LessonBlock{Type: "youtube", Index: len(youtube)})
 			youtube = append(youtube, ref)
 		default:
 			// Unknown directive: keep the literal text.
@@ -162,7 +190,8 @@ func parseDirectives(source string) (string, []VideoRef, []YoutubeRef) {
 		rest = rest[end:]
 	}
 	text.WriteString(rest)
-	return text.String(), videos, youtube
+	flush()
+	return text.String(), videos, youtube, blocks
 }
 
 // EscapeHTML escapes a fragment for safe embedding.
