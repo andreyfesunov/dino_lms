@@ -175,8 +175,8 @@ func LessonKey(chapterID, lessonID string) string {
 	return chapterID + "/" + lessonID
 }
 
-// CourseProgress averages chapter progress so every non-empty chapter has
-// equal weight, regardless of how many lessons it contains.
+// CourseProgress averages chapter progress so every chapter has equal weight,
+// including empty chapters, whose contribution is zero.
 func (s *CourseService) CourseProgress(course *CourseConfig, completed []string) uint8 {
 	if len(course.Chapters) == 0 {
 		return 0
@@ -188,7 +188,6 @@ func (s *CourseService) CourseProgress(course *CourseConfig, completed []string)
 	}
 
 	chapterProgress := new(big.Rat)
-	weightedChapters := int64(0)
 	for _, chapter := range course.Chapters {
 		lessons := len(chapter.Lessons)
 		if lessons == 0 {
@@ -201,15 +200,11 @@ func (s *CourseService) CourseProgress(course *CourseConfig, completed []string)
 			}
 		}
 		chapterProgress.Add(chapterProgress, new(big.Rat).SetFrac64(done, int64(lessons)))
-		weightedChapters++
-	}
-	if weightedChapters == 0 {
-		return 0
 	}
 
 	// Keep the average exact until converting it to the integer percentage sent
 	// to the UI. Round to the nearest whole percent without floating point math.
-	chapterProgress.Mul(chapterProgress, big.NewRat(100, weightedChapters))
+	chapterProgress.Mul(chapterProgress, big.NewRat(100, int64(len(course.Chapters))))
 	quotient, remainder := new(big.Int), new(big.Int)
 	quotient.QuoRem(chapterProgress.Num(), chapterProgress.Denom(), remainder)
 	if new(big.Int).Lsh(remainder, 1).Cmp(chapterProgress.Denom()) >= 0 {
