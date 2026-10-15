@@ -190,7 +190,7 @@ lesson-mark-done = Отметить пройденным
 lesson-mark-undone = Отметить как непройденное
 lesson-open-course = К курсу
 lesson-open-badge = Открыто
-lesson-open-link = Открыть на платформе →
+lesson-open-link = Смотреть видео
 
 access-grant-title = Предоставить доступ к курсу
 access-grant-sub = Выберите студента и курс

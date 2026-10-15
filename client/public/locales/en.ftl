@@ -190,7 +190,7 @@ lesson-mark-done = Mark as completed
 lesson-mark-undone = Mark as not completed
 lesson-open-course = To course
 lesson-open-badge = Open
-lesson-open-link = Open on platform →
+lesson-open-link = Watch video
 
 access-grant-title = Grant course access
 access-grant-sub = Pick a student and a course

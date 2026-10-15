@@ -154,7 +154,7 @@ import { Skeleton, Spinner } from '../../shared/loading';
                       <span class="font-body text-xs text-text-muted">{{ link.channel }}</span>
                     }
                     <span
-                      class="inline-flex items-center gap-1 font-body text-xs font-semibold text-primary"
+                      class="inline-flex items-center gap-1 font-body text-xs font-semibold leading-none text-primary"
                     >
                       <app-icon name="external-link" extra="h-3 w-3" />
                       {{ t('lesson-open-link') }}
