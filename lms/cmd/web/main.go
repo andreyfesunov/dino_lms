@@ -43,15 +43,20 @@ func run(cfg config.Config) error {
 		auth.Argon2Hasher{},
 	)
 	catalog := courses.OpenCatalog(cfg.Courses.Dir)
+	lessonChanges, err := courses.SyncLessonVersions(ctx, catalog, pool)
+	if err != nil {
+		return err
+	}
 	courseService := courses.NewCourseService(catalog, courses.NewSqliteCourseRepository(pool))
 
 	server := &httpapi.Server{
-		Calls:     calls.New(pool, courseService),
-		Auth:      authService,
-		Courses:   courseService,
-		Practices: practices.New(pool),
-		Catalog:   catalog,
-		Static:    staticHandler(),
+		Calls:         calls.New(pool, courseService),
+		Auth:          authService,
+		Courses:       courseService,
+		Practices:     practices.New(pool),
+		Catalog:       catalog,
+		LessonChanges: lessonChanges,
+		Static:        staticHandler(),
 	}
 
 	log.Printf("dino_lms listening on http://%s", cfg.Server.Addr)

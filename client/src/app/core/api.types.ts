@@ -36,6 +36,7 @@ export interface LessonEntry {
   title: string;
   duration_min: number | null;
   done: boolean;
+  change?: 'new' | 'updated';
 }
 
 export interface ChapterEntry {

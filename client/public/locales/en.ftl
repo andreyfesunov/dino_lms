@@ -174,6 +174,8 @@ course-chapter-access-locked = access locked
 course-empty = Course not found
 course-empty-hint = It may have been renamed or removed
 course-lesson-done = Chapter completed
+course-lesson-new = NEW
+course-lesson-updated = UPDATED
 course-lessons-count-short = { $count } less.
 
 lesson-meta = Chapter { $chapter } · Lesson { $current } of { $total } · ~{ $minutes } min

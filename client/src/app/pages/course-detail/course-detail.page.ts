@@ -243,6 +243,15 @@ import { Skeleton, Spinner } from '../../shared/loading';
                             extra="h-4 w-4"
                           />
                           <span>{{ lesson.title }}</span>
+                          @if (lesson.change === 'new') {
+                            <span class="rounded bg-[#DCFCE7] px-2 py-0.5 text-xs font-semibold text-[#166534]">
+                              {{ t('course-lesson-new') }}
+                            </span>
+                          } @else if (lesson.change === 'updated') {
+                            <span class="rounded bg-[#DBEAFE] px-2 py-0.5 text-xs font-semibold text-[#1D4ED8]">
+                              {{ t('course-lesson-updated') }}
+                            </span>
+                          }
                           @if (lesson.type === 'call') {
                             <span
                               class="rounded bg-primary-soft px-2 py-0.5 text-xs text-primary"

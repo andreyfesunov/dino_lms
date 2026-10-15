@@ -29,6 +29,7 @@ type lessonJSON struct {
 	Title       string   `json:"title"`
 	DurationMin *uint32  `json:"duration_min"`
 	Done        bool     `json:"done"`
+	Change      string   `json:"change,omitempty"`
 	PrevLesson  *navJSON `json:"prev"`
 	NextLesson  *navJSON `json:"next"`
 }
@@ -176,6 +177,7 @@ func (s *Server) handleCourseDetail(w http.ResponseWriter, r *http.Request) {
 				Title:       lesson.Title,
 				DurationMin: lesson.DurationMin,
 				Done:        containsString(completed, courses.LessonKey(chapter.ID, lesson.ID)),
+				Change:      s.LessonChanges[courses.LessonKey(course.ID+"/"+chapter.ID, lesson.ID)],
 			})
 		}
 		detail.Chapters = append(detail.Chapters, chapterOut)

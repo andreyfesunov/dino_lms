@@ -18,12 +18,13 @@ import (
 
 // Server carries the wired services for the HTTP handlers.
 type Server struct {
-	Calls     *calls.Service
-	Auth      *auth.AuthService
-	Courses   *courses.CourseService
-	Practices *practices.Service
-	Catalog   *courses.Catalog
-	Static    http.Handler // client bundle (Angular dist); optional in dev
+	Calls         *calls.Service
+	Auth          *auth.AuthService
+	Courses       *courses.CourseService
+	Practices     *practices.Service
+	Catalog       *courses.Catalog
+	LessonChanges map[string]string
+	Static        http.Handler // client bundle (Angular dist); optional in dev
 }
 
 // The browser sends sid automatically; client JavaScript cannot read this HttpOnly cookie.

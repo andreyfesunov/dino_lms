@@ -174,6 +174,8 @@ course-chapter-access-locked = доступ закрыт
 course-empty = Курс не найден
 course-empty-hint = Возможно, курс был переименован или удалён
 course-lesson-done = Глава пройдена
+course-lesson-new = NEW
+course-lesson-updated = UPDATED
 course-lessons-count-short = { $count } зан.
 
 lesson-meta = Глава { $chapter } · Занятие { $current } из { $total } · ~{ $minutes } мин
