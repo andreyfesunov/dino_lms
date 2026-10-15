@@ -36,7 +36,8 @@ type IconName =
   | 'download'
   | 'send'
   | 'check'
-  | 'message-square-text';
+  | 'message-square-text'
+  | 'calendar-days';
 
 const PATHS: Record<IconName, string[]> = {
   'chevron-down': ['m6 9 6 6 6-6'],
@@ -156,6 +157,17 @@ const PATHS: Record<IconName, string[]> = {
   send: ['m22 2-7 20-4-9-9-4Z', 'M22 2 11 13'],
   check: ['M20 6 9 17l-5-5'],
   'message-square-text': ['M21 15a4 4 0 0 1-4 4H7l-4 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z', 'M8 10h8', 'M8 14h6'],
+  'calendar-days': [
+    'M8 2v4',
+    'M16 2v4',
+    'M3 10h18',
+    'M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z',
+    'M8 14h.01',
+    'M12 14h.01',
+    'M16 14h.01',
+    'M8 18h.01',
+    'M12 18h.01',
+  ],
 };
 
 @Component({

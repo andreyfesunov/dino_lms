@@ -3,7 +3,9 @@ package db
 import (
 	"context"
 	"database/sql"
+	"io/fs"
 	"path/filepath"
+	"sort"
 	"testing"
 )
 
@@ -102,6 +104,72 @@ INSERT INTO lesson_progress VALUES ('student','full','chapter-1/intro',789);
 	var remaining int
 	if err = pool.QueryRow(`SELECT count(*) FROM course_access`).Scan(&remaining); err != nil || remaining != 0 {
 		t.Fatal(remaining, err)
+	}
+}
+
+func TestTeacherScheduleMigrationClearsWindowsAndPreservesCalls(t *testing.T) {
+	ctx := context.Background()
+	dsn, err := sqliteDSN(filepath.Join(t.TempDir(), "legacy.sqlite"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pool, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	pool.SetMaxOpenConns(1)
+	if _, err := pool.Exec(`CREATE TABLE _migrations (name TEXT PRIMARY KEY NOT NULL, applied_at INTEGER NOT NULL)`); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := fs.ReadDir(migrationsFS, "migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && filepath.Ext(entry.Name()) == ".sql" && entry.Name() != "20261015120000_teacher_call_schedules.sql" {
+			names = append(names, entry.Name())
+		}
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		body, err := migrationsFS.ReadFile("migrations/" + name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := applyMigration(ctx, pool, name, string(body)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := pool.Exec(`
+INSERT INTO users(id,login,role,status,first_name,last_name,created_at)
+VALUES('teacher','teacher','teacher','active','Test','Teacher',0),('student','student','student','active','Test','Student',0);
+INSERT INTO call_settings(course_id,chapter_id,lesson_id,teacher_id,duration_min,timezone,version)
+VALUES('course','chapter','lesson','teacher',30,'UTC',1);
+INSERT INTO call_windows(id,course_id,chapter_id,lesson_id,starts_at,ends_at)
+VALUES('window','course','chapter','lesson',2000000000,2000003600);
+INSERT INTO calls(id,course_id,chapter_id,lesson_id,course_title,lesson_title,teacher_id,student_id,teacher_name,student_name,starts_at,ends_at,created_at)
+VALUES('call','course','chapter','lesson','Course','Lesson','teacher','student','Test Teacher','Test Student',2000000000,2000001800,1);
+`); err != nil {
+		t.Fatal(err)
+	}
+	body, err := migrationsFS.ReadFile("migrations/20261015120000_teacher_call_schedules.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := applyMigration(ctx, pool, "20261015120000_teacher_call_schedules.sql", string(body)); err != nil {
+		t.Fatal(err)
+	}
+	var windows, calls int
+	if err := pool.QueryRow(`SELECT count(*) FROM call_windows`).Scan(&windows); err != nil {
+		t.Fatal(err)
+	}
+	if err := pool.QueryRow(`SELECT count(*) FROM calls`).Scan(&calls); err != nil {
+		t.Fatal(err)
+	}
+	if windows != 0 || calls != 1 {
+		t.Fatalf("migration left windows=%d calls=%d", windows, calls)
 	}
 }
 

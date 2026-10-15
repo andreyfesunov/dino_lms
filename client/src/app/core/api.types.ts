@@ -146,10 +146,28 @@ export interface CallSettings {
   teacher_id: string;
   teacher_name: string;
   duration_min: number;
-  timezone: string;
   version: number;
-  windows: CallWindow[];
   can_manage: boolean;
+}
+export interface WeeklyWindow {
+  weekday: number;
+  start_time: string;
+  end_time: string;
+}
+export interface ScheduleWindow {
+  start_time: string;
+  end_time: string;
+}
+export interface ScheduleException {
+  date: string;
+  windows: ScheduleWindow[];
+}
+export interface TeacherSchedule {
+  timezone: string;
+  horizon_weeks: number;
+  version: number;
+  weekly_windows: WeeklyWindow[];
+  exceptions: ScheduleException[];
 }
 export interface CallBooking extends CallKey {
   id: string;

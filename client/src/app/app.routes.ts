@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { manageUsersGuard, needsOnboardingGuard, onboardedGuard, practiceReviewerGuard, studentGuard } from './core/guards';
+import { manageUsersGuard, needsOnboardingGuard, onboardedGuard, practiceReviewerGuard, studentGuard, teacherGuard } from './core/guards';
 import { Shell } from './shared/shell';
 
 export const routes: Routes = [
@@ -16,6 +16,16 @@ export const routes: Routes = [
         path: 'calls',
         canActivate: [onboardedGuard],
         loadComponent: () => import('./pages/calls/calls.page').then((m) => m.CallsPage),
+      },
+      {
+        path: 'calls/schedule/template',
+        canActivate: [teacherGuard],
+        loadComponent: () => import('./pages/calls/template.page').then((m) => m.CallTemplatePage),
+      },
+      {
+        path: 'calls/schedule',
+        canActivate: [teacherGuard],
+        loadComponent: () => import('./pages/calls/schedule.page').then((m) => m.CallSchedulePage),
       },
       {
         path: 'courses',

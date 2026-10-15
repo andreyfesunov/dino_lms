@@ -10,6 +10,32 @@ import (
 func callKey(r *http.Request) calls.Key {
 	return calls.Key{CourseID: r.PathValue("course"), ChapterID: r.PathValue("chapter"), LessonID: r.PathValue("lesson")}
 }
+func (s *Server) handleCallSchedule(w http.ResponseWriter, r *http.Request) {
+	a, _, ok := s.requireOnboarded(w, r)
+	if !ok {
+		return
+	}
+	if r.Method == http.MethodPut {
+		var in calls.TeacherSchedule
+		if decodeJSON(r, &in) != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"code": "bad_request"})
+			return
+		}
+		out, err := s.Calls.SaveSchedule(r.Context(), *a, in)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		writeJSON(w, http.StatusOK, out)
+		return
+	}
+	out, err := s.Calls.Schedule(r.Context(), *a)
+	if err != nil {
+		writeError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, out)
+}
 func (s *Server) handleCallSettings(w http.ResponseWriter, r *http.Request) {
 	a, _, ok := s.requireOnboarded(w, r)
 	if !ok {

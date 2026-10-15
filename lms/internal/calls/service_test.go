@@ -72,10 +72,14 @@ lessons=[{id="call",title="Consultation",type="call"}]
 	f.s.now = func() time.Time { return now }
 	f.start = now.Add(24 * time.Hour).Unix()
 	for _, key := range []Key{f.key, f.otherKey} {
-		cfg := Settings{TeacherID: f.teacher.UserID.String(), DurationMin: 30, Timezone: "Europe/Moscow", Windows: []Window{{StartsAt: f.start, EndsAt: f.start + 7500}}}
+		cfg := Settings{TeacherID: f.teacher.UserID.String(), DurationMin: 30}
 		if _, err := f.s.SaveSettings(ctx, f.admin, key, cfg); err != nil {
 			t.Fatal(err)
 		}
+	}
+	schedule := TeacherSchedule{Timezone: "Europe/Moscow", HorizonWeeks: 12, WeeklyWindows: []WeeklyWindow{{Weekday: 3, StartTime: "03:00", EndTime: "05:00"}}, Exceptions: []ScheduleException{}}
+	if _, err := f.s.SaveSchedule(ctx, f.teacher, schedule); err != nil {
+		t.Fatal(err)
 	}
 	return f
 }
@@ -127,6 +131,57 @@ func TestSlotsAndCrossCourseConflicts(t *testing.T) {
 		t.Fatal(slots, err)
 	}
 }
+
+func TestWeeklyScheduleExceptionsAndHorizon(t *testing.T) {
+	f := setup(t)
+	ctx := context.Background()
+	base, err := f.s.Schedule(ctx, f.teacher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	base.Exceptions = []ScheduleException{{Date: "2030-01-09", Windows: []TimeWindow{}}, {Date: "2030-01-16", Windows: []TimeWindow{{StartTime: "04:00", EndTime: "05:00"}}}}
+	if _, err = f.s.SaveSchedule(ctx, f.teacher, base); err != nil {
+		t.Fatal(err)
+	}
+	weekly, err := f.s.Slots(ctx, f.student, f.key, f.start+7*86400, f.start+8*86400, "")
+	if err != nil || len(weekly) != 0 {
+		t.Fatalf("closed exception slots=%v err=%v", weekly, err)
+	}
+	override, err := f.s.Slots(ctx, f.student, f.key, f.start+14*86400, f.start+15*86400, "")
+	if err != nil || len(override) != 2 {
+		t.Fatalf("override slots=%v err=%v", override, err)
+	}
+	current, err := f.s.Schedule(ctx, f.teacher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	current.HorizonWeeks = 1
+	if _, err = f.s.SaveSchedule(ctx, f.teacher, current); err != nil {
+		t.Fatal(err)
+	}
+	outside, err := f.s.Slots(ctx, f.student, f.key, f.start+14*86400, f.start+15*86400, "")
+	if err != nil || len(outside) != 0 {
+		t.Fatalf("outside horizon slots=%v err=%v", outside, err)
+	}
+}
+
+func TestScheduleVersionAndAccess(t *testing.T) {
+	f := setup(t)
+	ctx := context.Background()
+	current, err := f.s.Schedule(ctx, f.teacher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.Schedule(ctx, f.student); err == nil {
+		t.Fatal("student read teacher schedule")
+	}
+	updated, err := f.s.SaveSchedule(ctx, f.teacher, current)
+	if err != nil || updated.Version != current.Version+1 {
+		t.Fatalf("updated=%+v err=%v", updated, err)
+	}
+	_, err = f.s.SaveSchedule(ctx, f.teacher, current)
+	code(t, err, "conflict")
+}
 func TestConcurrentBookingOnlyOneWins(t *testing.T) {
 	f := setup(t)
 	var wg sync.WaitGroup
@@ -154,8 +209,10 @@ func TestStudentCannotOverlapDifferentTeachers(t *testing.T) {
 	ctx := context.Background()
 	cfg, _ := f.s.Settings(ctx, f.admin, f.otherKey)
 	cfg.TeacherID = f.other.UserID.String()
-	cfg.Windows = []Window{{StartsAt: f.start, EndsAt: f.start + 3600}}
 	if _, err := f.s.SaveSettings(ctx, f.admin, f.otherKey, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.SaveSchedule(ctx, f.other, TeacherSchedule{Timezone: "Europe/Moscow", HorizonWeeks: 12, WeeklyWindows: []WeeklyWindow{{Weekday: 3, StartTime: "03:00", EndTime: "04:00"}}}); err != nil {
 		t.Fatal(err)
 	}
 	book(t, f, f.student, f.key, f.start)
@@ -241,7 +298,6 @@ func TestSettingsChangesPreserveBookingsAndLifecycle(t *testing.T) {
 	_, err = f.s.SaveSettings(ctx, f.other, f.key, cfg)
 	code(t, err, "forbidden")
 	cfg.DurationMin = 45
-	cfg.Windows = nil
 	cfg, err = f.s.SaveSettings(ctx, f.teacher, f.key, cfg)
 	if err != nil {
 		t.Fatal(err)
@@ -269,7 +325,7 @@ func TestSettingsChangesPreserveBookingsAndLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = f.s.SaveSettings(ctx, f.admin, f.key, Settings{TeacherID: cfg.TeacherID, DurationMin: 30, Timezone: "UTC", Version: cfg.Version - 1})
+	_, err = f.s.SaveSettings(ctx, f.admin, f.key, Settings{TeacherID: cfg.TeacherID, DurationMin: 30, Version: cfg.Version - 1})
 	code(t, err, "conflict")
 	// Unassigned teacher cannot edit previous calls, but admin can still inspect history.
 	list, err := f.s.List(ctx, f.second)
@@ -292,21 +348,30 @@ func TestSettingsValidationAndAccessRevocation(t *testing.T) {
 	f := setup(t)
 	ctx := context.Background()
 	cfg, _ := f.s.Settings(ctx, f.teacher, f.key)
-	for _, mutate := range []func(*Settings){func(c *Settings) { c.DurationMin = 0 }, func(c *Settings) { c.Timezone = "invalid/zone" }, func(c *Settings) {
-		c.Windows = append(c.Windows, Window{StartsAt: f.start + 60, EndsAt: f.start + 3600})
-	}} {
-		test := cfg
-		test.Windows = append([]Window{}, cfg.Windows...)
-		mutate(&test)
-		_, err := f.s.SaveSettings(ctx, f.teacher, f.key, test)
-		code(t, err, "bad_request")
+	invalid := cfg
+	invalid.DurationMin = 0
+	if _, err := f.s.SaveSettings(ctx, f.teacher, f.key, invalid); err == nil {
+		t.Fatal("accepted invalid call duration")
+	}
+	invalidSchedule, err := f.s.Schedule(ctx, f.teacher)
+	if err != nil {
+		t.Fatal(err)
+	}
+	invalidSchedule.WeeklyWindows = []WeeklyWindow{{Weekday: 3, StartTime: "03:00", EndTime: "04:00"}, {Weekday: 3, StartTime: "03:30", EndTime: "05:00"}}
+	if _, err := f.s.SaveSchedule(ctx, f.teacher, invalidSchedule); err == nil {
+		t.Fatal("accepted overlapping weekly intervals")
+	}
+	invalidSchedule.Timezone = "invalid/zone"
+	invalidSchedule.WeeklyWindows = nil
+	if _, err := f.s.SaveSchedule(ctx, f.teacher, invalidSchedule); err == nil {
+		t.Fatal("accepted invalid time zone")
 	}
 	c := book(t, f, f.student, f.key, f.start)
 	// Revoke even though the chapter is open by default.
 	if err := f.s.courses.Revoke(ctx, f.admin, f.student.UserID, "sample"); err != nil {
 		t.Fatal(err)
 	}
-	_, err := f.s.Slots(ctx, f.student, f.key, f.start, f.start+86400, "")
+	_, err = f.s.Slots(ctx, f.student, f.key, f.start, f.start+86400, "")
 	code(t, err, "forbidden")
 	_, err = f.s.Change(ctx, f.student, c.ID, Change{Action: "reschedule", Version: c.Version, StartsAt: f.start + 1800})
 	code(t, err, "forbidden")

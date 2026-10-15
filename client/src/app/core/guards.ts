@@ -79,3 +79,14 @@ export const studentGuard: CanActivateFn = () => {
   if (session.needsOnboarding()) return router.createUrlTree(['/onboarding']);
   return session.user()?.role === 'student' ? true : router.createUrlTree(['/courses']);
 };
+
+export const teacherGuard: CanActivateFn = () => {
+  const session = inject(SessionStore);
+  const router = inject(Router);
+  if (!session.ready()) return router.createUrlTree(['/']);
+  if (!session.signedIn()) return router.createUrlTree(['/login']);
+  if (session.needsOnboarding()) return router.createUrlTree(['/onboarding']);
+  return session.user()?.role === 'teacher' || session.isAdmin()
+    ? true
+    : router.createUrlTree(['/calls']);
+};

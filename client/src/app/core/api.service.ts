@@ -13,6 +13,7 @@ import {
   CallSettings,
   CallWindow,
   CallBooking,
+  TeacherSchedule,
   PracticeAttempt,
   PracticeDashboard,
 } from './api.types';
@@ -39,6 +40,12 @@ export class ApiService {
   }
   callTeachers() {
     return this.request<{ teachers: { id: string; name: string }[] }>('GET', '/api/calls/teachers');
+  }
+  teacherSchedule() {
+    return this.request<TeacherSchedule>('GET', '/api/calls/schedule');
+  }
+  saveTeacherSchedule(schedule: TeacherSchedule) {
+    return this.request<TeacherSchedule>('PUT', '/api/calls/schedule', schedule);
   }
   callSlots(k: CallKey, from: number, to: number, except = '') {
     const params = new URLSearchParams({ from: String(from), to: String(to), except });

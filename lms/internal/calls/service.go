@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 	_ "time/tzdata"
@@ -31,13 +32,31 @@ type Window struct {
 	EndsAt   int64  `json:"ends_at"`
 }
 type Settings struct {
-	TeacherID   string   `json:"teacher_id"`
-	TeacherName string   `json:"teacher_name"`
-	DurationMin int      `json:"duration_min"`
-	Timezone    string   `json:"timezone"`
-	Version     int      `json:"version"`
-	Windows     []Window `json:"windows"`
-	CanManage   bool     `json:"can_manage"`
+	TeacherID   string `json:"teacher_id"`
+	TeacherName string `json:"teacher_name"`
+	DurationMin int    `json:"duration_min"`
+	Version     int    `json:"version"`
+	CanManage   bool   `json:"can_manage"`
+}
+type TimeWindow struct {
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+type WeeklyWindow struct {
+	Weekday   int    `json:"weekday"`
+	StartTime string `json:"start_time"`
+	EndTime   string `json:"end_time"`
+}
+type ScheduleException struct {
+	Date    string       `json:"date"`
+	Windows []TimeWindow `json:"windows"`
+}
+type TeacherSchedule struct {
+	Timezone      string              `json:"timezone"`
+	HorizonWeeks  int                 `json:"horizon_weeks"`
+	Version       int                 `json:"version"`
+	WeeklyWindows []WeeklyWindow      `json:"weekly_windows"`
+	Exceptions    []ScheduleException `json:"exceptions"`
 }
 type Teacher struct {
 	ID   string `json:"id"`
@@ -97,27 +116,15 @@ func (s *Service) lesson(ctx context.Context, a kernel.Actor, k Key) (*courses.C
 	return c, l, nil
 }
 func settings(ctx context.Context, q querier, k Key) (Settings, error) {
-	out := Settings{DurationMin: 30, Timezone: "UTC", Windows: []Window{}}
-	err := q.QueryRowContext(ctx, `SELECT COALESCE(s.teacher_id,''), COALESCE(trim(u.first_name || ' ' || u.last_name),''),s.duration_min,s.timezone,s.version FROM call_settings s LEFT JOIN users u ON u.id=s.teacher_id WHERE course_id=? AND chapter_id=? AND lesson_id=?`, k.CourseID, k.ChapterID, k.LessonID).Scan(&out.TeacherID, &out.TeacherName, &out.DurationMin, &out.Timezone, &out.Version)
+	out := Settings{DurationMin: 30}
+	err := q.QueryRowContext(ctx, `SELECT COALESCE(s.teacher_id,''), COALESCE(trim(u.first_name || ' ' || u.last_name),''),s.duration_min,s.version FROM call_settings s LEFT JOIN users u ON u.id=s.teacher_id WHERE course_id=? AND chapter_id=? AND lesson_id=?`, k.CourseID, k.ChapterID, k.LessonID).Scan(&out.TeacherID, &out.TeacherName, &out.DurationMin, &out.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return out, nil
 	}
 	if err != nil {
 		return out, err
 	}
-	rows, err := q.QueryContext(ctx, `SELECT id,starts_at,ends_at FROM call_windows WHERE course_id=? AND chapter_id=? AND lesson_id=? ORDER BY starts_at`, k.CourseID, k.ChapterID, k.LessonID)
-	if err != nil {
-		return out, err
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var w Window
-		if err := rows.Scan(&w.ID, &w.StartsAt, &w.EndsAt); err != nil {
-			return out, err
-		}
-		out.Windows = append(out.Windows, w)
-	}
-	return out, rows.Err()
+	return out, nil
 }
 func manages(a kernel.Actor, teacher string) bool {
 	return a.HasRole(kernel.RoleAdmin) || (a.HasRole(kernel.RoleTeacher) && a.UserID.String() == teacher)
@@ -128,11 +135,207 @@ func (s *Service) Settings(ctx context.Context, a kernel.Actor, k Key) (Settings
 	}
 	out, err := settings(ctx, s.db, k)
 	out.CanManage = manages(a, out.TeacherID)
-	// Students only need the derived slots, never the teacher's full windows.
-	if !out.CanManage {
-		out.Windows = []Window{}
-	}
 	return out, err
+}
+
+func minuteOfDay(value string) (int, bool) {
+	t, err := time.Parse("15:04", value)
+	if err != nil || t.Format("15:04") != value {
+		return 0, false
+	}
+	return t.Hour()*60 + t.Minute(), true
+}
+
+func clockTime(minute int) string {
+	return time.Date(2000, 1, 1, minute/60, minute%60, 0, 0, time.UTC).Format("15:04")
+}
+
+func validTimeWindows(windows []TimeWindow) ([][2]int, bool) {
+	if len(windows) > 100 {
+		return nil, false
+	}
+	minutes := make([][2]int, 0, len(windows))
+	for _, window := range windows {
+		start, okStart := minuteOfDay(window.StartTime)
+		end, okEnd := minuteOfDay(window.EndTime)
+		if !okStart || !okEnd || end <= start {
+			return nil, false
+		}
+		minutes = append(minutes, [2]int{start, end})
+	}
+	sort.Slice(minutes, func(i, j int) bool { return minutes[i][0] < minutes[j][0] })
+	for i := 1; i < len(minutes); i++ {
+		if minutes[i][0] < minutes[i-1][1] {
+			return nil, false
+		}
+	}
+	return minutes, true
+}
+
+func teacherSchedule(ctx context.Context, q querier, teacherID string) (TeacherSchedule, error) {
+	out := TeacherSchedule{HorizonWeeks: 12, WeeklyWindows: []WeeklyWindow{}, Exceptions: []ScheduleException{}}
+	err := q.QueryRowContext(ctx, `SELECT timezone,horizon_weeks,version FROM teacher_schedules WHERE teacher_id=?`, teacherID).Scan(&out.Timezone, &out.HorizonWeeks, &out.Version)
+	if errors.Is(err, sql.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return out, err
+	}
+	rows, err := q.QueryContext(ctx, `SELECT weekday,start_minute,end_minute FROM teacher_weekly_windows WHERE teacher_id=? ORDER BY weekday,start_minute`, teacherID)
+	if err != nil {
+		return out, err
+	}
+	for rows.Next() {
+		var window WeeklyWindow
+		var start, end int
+		if err := rows.Scan(&window.Weekday, &start, &end); err != nil {
+			rows.Close()
+			return out, err
+		}
+		window.StartTime, window.EndTime = clockTime(start), clockTime(end)
+		out.WeeklyWindows = append(out.WeeklyWindows, window)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return out, err
+	}
+	rows, err = q.QueryContext(ctx, `SELECT local_date FROM teacher_schedule_exceptions WHERE teacher_id=? ORDER BY local_date`, teacherID)
+	if err != nil {
+		return out, err
+	}
+	dateKeys := []string{}
+	for rows.Next() {
+		var date string
+		if err := rows.Scan(&date); err != nil {
+			rows.Close()
+			return out, err
+		}
+		dateKeys = append(dateKeys, date)
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return out, err
+	}
+	for _, date := range dateKeys {
+		exception := ScheduleException{Date: date, Windows: []TimeWindow{}}
+		windowRows, err := q.QueryContext(ctx, `SELECT start_minute,end_minute FROM teacher_exception_windows WHERE teacher_id=? AND local_date=? ORDER BY start_minute`, teacherID, date)
+		if err != nil {
+			return out, err
+		}
+		for windowRows.Next() {
+			var start, end int
+			if err := windowRows.Scan(&start, &end); err != nil {
+				windowRows.Close()
+				return out, err
+			}
+			exception.Windows = append(exception.Windows, TimeWindow{StartTime: clockTime(start), EndTime: clockTime(end)})
+		}
+		if err := windowRows.Err(); err != nil {
+			windowRows.Close()
+			return out, err
+		}
+		windowRows.Close()
+		out.Exceptions = append(out.Exceptions, exception)
+	}
+	return out, nil
+}
+
+func (s *Service) Schedule(ctx context.Context, a kernel.Actor) (TeacherSchedule, error) {
+	if !a.HasRole(kernel.RoleTeacher) && !a.HasRole(kernel.RoleAdmin) {
+		return TeacherSchedule{}, fail("forbidden")
+	}
+	return teacherSchedule(ctx, s.db, a.UserID.String())
+}
+
+func (s *Service) SaveSchedule(ctx context.Context, a kernel.Actor, in TeacherSchedule) (TeacherSchedule, error) {
+	if !a.HasRole(kernel.RoleTeacher) && !a.HasRole(kernel.RoleAdmin) {
+		return TeacherSchedule{}, fail("forbidden")
+	}
+	if _, err := time.LoadLocation(in.Timezone); err != nil || in.HorizonWeeks < 1 || in.HorizonWeeks > 52 || len(in.WeeklyWindows) > 100 || len(in.Exceptions) > 366 {
+		return TeacherSchedule{}, fail("bad_request")
+	}
+	weekly := make([][3]int, 0, len(in.WeeklyWindows))
+	byDay := [7][]TimeWindow{}
+	for _, window := range in.WeeklyWindows {
+		if window.Weekday < 0 || window.Weekday > 6 {
+			return TeacherSchedule{}, fail("bad_request")
+		}
+		byDay[window.Weekday] = append(byDay[window.Weekday], TimeWindow{StartTime: window.StartTime, EndTime: window.EndTime})
+	}
+	for weekday, windows := range byDay {
+		minutes, ok := validTimeWindows(windows)
+		if !ok {
+			return TeacherSchedule{}, fail("bad_request")
+		}
+		for _, window := range minutes {
+			weekly = append(weekly, [3]int{weekday, window[0], window[1]})
+		}
+	}
+	loc, _ := time.LoadLocation(in.Timezone)
+	today := s.now().In(loc).Format("2006-01-02")
+	exceptions := make(map[string][][2]int, len(in.Exceptions))
+	for _, exception := range in.Exceptions {
+		parsed, err := time.Parse("2006-01-02", exception.Date)
+		if err != nil || parsed.Format("2006-01-02") != exception.Date || exception.Date < today {
+			return TeacherSchedule{}, fail("bad_request")
+		}
+		if _, exists := exceptions[exception.Date]; exists {
+			return TeacherSchedule{}, fail("bad_request")
+		}
+		windows, ok := validTimeWindows(exception.Windows)
+		if !ok {
+			return TeacherSchedule{}, fail("bad_request")
+		}
+		exceptions[exception.Date] = windows
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return TeacherSchedule{}, err
+	}
+	defer tx.Rollback()
+	old, err := teacherSchedule(ctx, tx, a.UserID.String())
+	if err != nil {
+		return TeacherSchedule{}, err
+	}
+	if old.Version != in.Version {
+		return TeacherSchedule{}, fail("conflict")
+	}
+	if old.Version == 0 {
+		_, err = tx.ExecContext(ctx, `INSERT INTO teacher_schedules(teacher_id,timezone,horizon_weeks,version) VALUES(?,?,?,1)`, a.UserID.String(), in.Timezone, in.HorizonWeeks)
+	} else {
+		_, err = tx.ExecContext(ctx, `UPDATE teacher_schedules SET timezone=?,horizon_weeks=?,version=version+1 WHERE teacher_id=?`, in.Timezone, in.HorizonWeeks, a.UserID.String())
+	}
+	if err != nil {
+		return TeacherSchedule{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM teacher_weekly_windows WHERE teacher_id=?`, a.UserID.String()); err != nil {
+		return TeacherSchedule{}, err
+	}
+	if _, err = tx.ExecContext(ctx, `DELETE FROM teacher_schedule_exceptions WHERE teacher_id=?`, a.UserID.String()); err != nil {
+		return TeacherSchedule{}, err
+	}
+	for _, window := range weekly {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO teacher_weekly_windows(id,teacher_id,weekday,start_minute,end_minute) VALUES(?,?,?,?,?)`, uuid.NewString(), a.UserID.String(), window[0], window[1], window[2]); err != nil {
+			return TeacherSchedule{}, err
+		}
+	}
+	for date, windows := range exceptions {
+		if _, err = tx.ExecContext(ctx, `INSERT INTO teacher_schedule_exceptions(teacher_id,local_date) VALUES(?,?)`, a.UserID.String(), date); err != nil {
+			return TeacherSchedule{}, err
+		}
+		for _, window := range windows {
+			if _, err = tx.ExecContext(ctx, `INSERT INTO teacher_exception_windows(teacher_id,local_date,start_minute,end_minute) VALUES(?,?,?,?)`, a.UserID.String(), date, window[0], window[1]); err != nil {
+				return TeacherSchedule{}, err
+			}
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return TeacherSchedule{}, err
+	}
+	return teacherSchedule(ctx, s.db, a.UserID.String())
 }
 func (s *Service) Teachers(ctx context.Context, a kernel.Actor) ([]Teacher, error) {
 	if !a.HasRole(kernel.RoleAdmin) {
@@ -157,10 +360,7 @@ func (s *Service) SaveSettings(ctx context.Context, a kernel.Actor, k Key, in Se
 	if _, _, err := s.lesson(ctx, a, k); err != nil {
 		return Settings{}, err
 	}
-	if in.DurationMin < 5 || in.DurationMin > 480 || len(in.Windows) > 500 {
-		return Settings{}, fail("bad_request")
-	}
-	if _, err := time.LoadLocation(in.Timezone); err != nil {
+	if in.DurationMin < 5 || in.DurationMin > 480 {
 		return Settings{}, fail("bad_request")
 	}
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -200,50 +400,10 @@ func (s *Service) SaveSettings(ctx context.Context, a kernel.Actor, k Key, in Se
 		if n > 0 {
 			return Settings{}, fail("calls_teacher_busy")
 		}
-		// Discard windows belonging to the former teacher; newly entered windows
-		// may be submitted with the assignment in the same save.
-		fresh := []Window{}
-		for _, w := range in.Windows {
-			if w.ID == "" {
-				fresh = append(fresh, w)
-			}
-		}
-		in.Windows = fresh
 	}
-	if in.TeacherID == "" && len(in.Windows) > 0 {
-		return Settings{}, fail("bad_request")
-	}
-	// Allow unchanged historical windows when saving other settings.
-	for i, w := range in.Windows {
-		if w.StartsAt < 0 || w.EndsAt > 253402300799 || w.EndsAt <= w.StartsAt || w.EndsAt-w.StartsAt > 7*86400 {
-			return Settings{}, fail("bad_request")
-		}
-		unchanged := false
-		for _, prev := range old.Windows {
-			if prev.ID == w.ID && prev.StartsAt == w.StartsAt && prev.EndsAt == w.EndsAt {
-				unchanged = true
-			}
-		}
-		if !unchanged && w.StartsAt <= s.now().Unix() {
-			return Settings{}, fail("bad_request")
-		}
-		for _, other := range in.Windows[:i] {
-			if w.StartsAt < other.EndsAt && w.EndsAt > other.StartsAt {
-				return Settings{}, fail("bad_request")
-			}
-		}
-	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO call_settings(course_id,chapter_id,lesson_id,teacher_id,duration_min,timezone,version) VALUES(?,?,?,NULLIF(?,''),?,?,1) ON CONFLICT(course_id,chapter_id,lesson_id) DO UPDATE SET teacher_id=excluded.teacher_id,duration_min=excluded.duration_min,timezone=excluded.timezone,version=call_settings.version+1`, k.CourseID, k.ChapterID, k.LessonID, in.TeacherID, in.DurationMin, in.Timezone)
+	_, err = tx.ExecContext(ctx, `INSERT INTO call_settings(course_id,chapter_id,lesson_id,teacher_id,duration_min,timezone,version) VALUES(?,?,?,NULLIF(?,''),?,'UTC',1) ON CONFLICT(course_id,chapter_id,lesson_id) DO UPDATE SET teacher_id=excluded.teacher_id,duration_min=excluded.duration_min,version=call_settings.version+1`, k.CourseID, k.ChapterID, k.LessonID, in.TeacherID, in.DurationMin)
 	if err != nil {
 		return Settings{}, err
-	}
-	if _, err = tx.ExecContext(ctx, `DELETE FROM call_windows WHERE course_id=? AND chapter_id=? AND lesson_id=?`, k.CourseID, k.ChapterID, k.LessonID); err != nil {
-		return Settings{}, err
-	}
-	for _, w := range in.Windows {
-		if _, err = tx.ExecContext(ctx, `INSERT INTO call_windows(id,course_id,chapter_id,lesson_id,starts_at,ends_at) VALUES(?,?,?,?,?,?)`, uuid.NewString(), k.CourseID, k.ChapterID, k.LessonID, w.StartsAt, w.EndsAt); err != nil {
-			return Settings{}, err
-		}
 	}
 	if err = tx.Commit(); err != nil {
 		return Settings{}, err
@@ -255,17 +415,64 @@ func conflict(ctx context.Context, q querier, teacher, student, except string, s
 	err := q.QueryRowContext(ctx, `SELECT count(*) FROM calls WHERE id!=? AND status='scheduled' AND starts_at<? AND ends_at>? AND (teacher_id=? OR student_id=? OR teacher_id=? OR student_id=?)`, except, end, start, teacher, student, student, teacher).Scan(&n)
 	return n > 0, err
 }
-func fits(cfg Settings, start, end int64) bool {
-	if cfg.TeacherID == "" {
-		return false
-	}
-	step := int64(cfg.DurationMin) * 60
-	for _, w := range cfg.Windows {
-		if start >= w.StartsAt && end <= w.EndsAt && (start-w.StartsAt)%step == 0 && end-start == step {
-			return true
+func scheduleWindowsForDate(schedule TeacherSchedule, date string, weekday int) []TimeWindow {
+	for _, exception := range schedule.Exceptions {
+		if exception.Date == date {
+			return exception.Windows
 		}
 	}
-	return false
+	out := []TimeWindow{}
+	for _, window := range schedule.WeeklyWindows {
+		if window.Weekday == weekday {
+			out = append(out, TimeWindow{StartTime: window.StartTime, EndTime: window.EndTime})
+		}
+	}
+	return out
+}
+
+func localDateTime(date time.Time, minute int, loc *time.Location) (time.Time, bool) {
+	value := time.Date(date.Year(), date.Month(), date.Day(), minute/60, minute%60, 0, 0, loc)
+	local := value.In(loc)
+	return value, local.Year() == date.Year() && local.Month() == date.Month() && local.Day() == date.Day() && local.Hour() == minute/60 && local.Minute() == minute%60
+}
+
+func scheduleContains(ctx context.Context, q querier, teacher string, duration int, start, end int64, now time.Time) (bool, error) {
+	if teacher == "" || end-start != int64(duration)*60 {
+		return false, nil
+	}
+	schedule, err := teacherSchedule(ctx, q, teacher)
+	if err != nil {
+		return false, err
+	}
+	if schedule.Version == 0 {
+		return false, nil
+	}
+	loc, err := time.LoadLocation(schedule.Timezone)
+	if err != nil {
+		return false, nil
+	}
+	localStart := time.Unix(start, 0).In(loc)
+	day := time.Date(localStart.Year(), localStart.Month(), localStart.Day(), 0, 0, 0, 0, loc)
+	today := now.In(loc)
+	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, loc)
+	if day.Before(today) || !day.Before(today.AddDate(0, 0, schedule.HorizonWeeks*7)) {
+		return false, nil
+	}
+	date := localStart.Format("2006-01-02")
+	for _, window := range scheduleWindowsForDate(schedule, date, int(localStart.Weekday())) {
+		startMinute, _ := minuteOfDay(window.StartTime)
+		endMinute, _ := minuteOfDay(window.EndTime)
+		windowStart, okStart := localDateTime(day, startMinute, loc)
+		windowEnd, okEnd := localDateTime(day, endMinute, loc)
+		if !okStart || !okEnd {
+			continue
+		}
+		step := int64(duration) * 60
+		if start >= windowStart.Unix() && end <= windowEnd.Unix() && (start-windowStart.Unix())%step == 0 {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 func (s *Service) Slots(ctx context.Context, a kernel.Actor, k Key, from, to int64, except string) ([]Window, error) {
 	if _, _, err := s.lesson(ctx, a, k); err != nil {
@@ -310,26 +517,57 @@ func (s *Service) Slots(ctx context.Context, a kernel.Actor, k Key, from, to int
 	if err != nil {
 		return nil, err
 	}
+	schedule, err := teacherSchedule(ctx, s.db, cfg.TeacherID)
+	if err != nil {
+		return nil, err
+	}
+	if schedule.Version == 0 {
+		return out, nil
+	}
+	loc, err := time.LoadLocation(schedule.Timezone)
+	if err != nil {
+		return nil, fail("bad_request")
+	}
 	step := int64(cfg.DurationMin) * 60
-	now := s.now().Unix()
-	for _, w := range cfg.Windows {
-		start := w.StartsAt
-		if start < from {
-			start += ((from - start + step - 1) / step) * step
+	now := s.now()
+	first := time.Unix(from, 0).In(loc)
+	day := time.Date(first.Year(), first.Month(), first.Day(), 0, 0, 0, 0, loc)
+	last := time.Unix(to-1, 0).In(loc)
+	lastDay := time.Date(last.Year(), last.Month(), last.Day(), 0, 0, 0, 0, loc)
+	today := now.In(loc)
+	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, loc)
+	horizonEnd := today.AddDate(0, 0, schedule.HorizonWeeks*7)
+	for ; !day.After(lastDay) && day.Before(horizonEnd); day = day.AddDate(0, 0, 1) {
+		if day.Before(today) {
+			continue
 		}
-		for ; start+step <= w.EndsAt && start < to; start += step {
-			if start <= now {
+		date := day.Format("2006-01-02")
+		for _, window := range scheduleWindowsForDate(schedule, date, int(day.Weekday())) {
+			startMinute, _ := minuteOfDay(window.StartTime)
+			endMinute, _ := minuteOfDay(window.EndTime)
+			windowStart, okStart := localDateTime(day, startMinute, loc)
+			windowEnd, okEnd := localDateTime(day, endMinute, loc)
+			if !okStart || !okEnd || windowEnd.Before(windowStart) {
 				continue
 			}
-			free := true
-			for _, b := range busy {
-				if start < b.EndsAt && start+step > b.StartsAt {
-					free = false
-					break
-				}
+			start := windowStart.Unix()
+			if start < from {
+				start += ((from - start + step - 1) / step) * step
 			}
-			if free {
-				out = append(out, Window{StartsAt: start, EndsAt: start + step})
+			for ; start+step <= windowEnd.Unix() && start < to; start += step {
+				if start <= now.Unix() || start < from {
+					continue
+				}
+				free := true
+				for _, b := range busy {
+					if start < b.EndsAt && start+step > b.StartsAt {
+						free = false
+						break
+					}
+				}
+				if free {
+					out = append(out, Window{StartsAt: start, EndsAt: start + step})
+				}
 			}
 		}
 	}
@@ -392,7 +630,11 @@ func (s *Service) Book(ctx context.Context, a kernel.Actor, k Key, start int64) 
 		return Call{}, err
 	}
 	end := start + int64(cfg.DurationMin)*60
-	if start <= s.now().Unix() || !fits(cfg, start, end) {
+	fits, err := scheduleContains(ctx, tx, cfg.TeacherID, cfg.DurationMin, start, end, s.now())
+	if err != nil {
+		return Call{}, err
+	}
+	if start <= s.now().Unix() || !fits {
 		return Call{}, fail("conflict")
 	}
 	var n int
@@ -472,7 +714,11 @@ func (s *Service) Change(ctx context.Context, a kernel.Actor, id string, in Chan
 				return c, err
 			}
 			end = in.StartsAt + int64(cfg.DurationMin)*60
-			if cfg.TeacherID != c.TeacherID || !fits(cfg, in.StartsAt, end) {
+			fits, err := scheduleContains(ctx, tx, cfg.TeacherID, cfg.DurationMin, in.StartsAt, end, s.now())
+			if err != nil {
+				return c, err
+			}
+			if cfg.TeacherID != c.TeacherID || !fits {
 				return c, fail("conflict")
 			}
 		}

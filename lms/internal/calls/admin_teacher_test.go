@@ -33,8 +33,10 @@ func TestAdminCanTeachCall(t *testing.T) {
 	_, err = f.s.SaveSettings(ctx, f.admin, f.key, cfg)
 	code(t, err, "bad_request")
 	cfg.TeacherID = f.admin.UserID.String()
-	cfg.Windows = []Window{{StartsAt: f.start, EndsAt: f.start + 3600}}
 	if _, err := f.s.SaveSettings(ctx, f.admin, f.key, cfg); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.s.SaveSchedule(ctx, f.admin, TeacherSchedule{Timezone: "UTC", HorizonWeeks: 12, WeeklyWindows: []WeeklyWindow{{Weekday: 3, StartTime: "00:00", EndTime: "01:00"}}}); err != nil {
 		t.Fatal(err)
 	}
 	c := book(t, f, f.student, f.key, f.start)

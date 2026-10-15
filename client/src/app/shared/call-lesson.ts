@@ -6,12 +6,12 @@ import { SessionStore } from '../core/session.store';
 import { I18nService } from '../core/i18n.service';
 import { CallSlots } from './call-slots';
 import { CallCard } from './call-card';
-import { localCallInput, localCallTime } from './call-time';
 import { Spinner } from './loading';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-call-lesson',
-  imports: [FormsModule, CallSlots, CallCard, Spinner],
+  imports: [FormsModule, CallSlots, CallCard, Spinner, RouterLink],
   template: `
     <div class="flex flex-col gap-5">
       @if (error()) {
@@ -32,6 +32,11 @@ import { Spinner } from './loading';
           {{ cfg.teacher_name || t('calls-no-teacher') }} · {{ cfg.duration_min }}
           {{ t('calls-minutes') }}
         </p>
+        @if (cfg.can_manage) {
+          <a routerLink="/calls/schedule" class="w-fit rounded-md bg-primary-soft px-4 py-2 text-primary">
+            {{ t('calls-open-schedule') }}
+          </a>
+        }
         @if (session.isAdmin() || cfg.can_manage) {
           <details
             class="rounded-lg border border-border bg-surface p-4"
@@ -47,7 +52,7 @@ import { Spinner } from './loading';
                     class="min-w-0 w-full rounded-md border border-border bg-input p-3"
                     [(ngModel)]="cfg.teacher_id"
                     [attr.aria-label]="t('calls-teacher')"
-                    (ngModelChange)="cfg.windows = []; saved.set(false)"
+                    (ngModelChange)="saved.set(false)"
                   >
                     <option value="">{{ t('calls-no-teacher') }}</option>
                     @for (teacher of teachers(); track teacher.id) {
@@ -67,73 +72,8 @@ import { Spinner } from './loading';
                     [(ngModel)]="cfg.duration_min"
                     (ngModelChange)="saved.set(false)"
                 /></label>
-                <label class="flex flex-col gap-1"
-                  >{{ t('calls-timezone')
-                  }}<select
-                    class="min-w-0 w-full rounded-md border border-border bg-input p-3"
-                    [attr.aria-label]="t('calls-timezone')"
-                    [(ngModel)]="cfg.timezone"
-                    (ngModelChange)="saved.set(false)"
-                  >
-                    @for (zone of zones; track zone) {
-                      <option [value]="zone">{{ zone }}</option>
-                    }
-                  </select></label
-                >
               </div>
-              <p class="text-sm text-text-muted">{{ t('calls-window-help') }}</p>
-              @for (window of cfg.windows; track $index; let i = $index) {
-                <div class="grid gap-3 rounded-md bg-input p-3 sm:grid-cols-2">
-                  <label class="flex min-w-0 flex-col gap-1 text-sm"
-                    >{{ t('calls-start')
-                    }}<input
-                      type="datetime-local"
-                      class="min-w-0 w-full rounded-md border border-border bg-surface px-2 py-2 font-body text-[13px]"
-                      [ngModel]="local(window.starts_at, cfg.timezone)"
-                      (ngModelChange)="editWindow(i, 'starts_at', $event)"
-                  /></label>
-                  <label class="flex min-w-0 flex-col gap-1 text-sm"
-                    >{{ t('calls-end')
-                    }}<input
-                      type="datetime-local"
-                      class="min-w-0 w-full rounded-md border border-border bg-surface px-2 py-2 font-body text-[13px]"
-                      [ngModel]="local(window.ends_at, cfg.timezone)"
-                      (ngModelChange)="editWindow(i, 'ends_at', $event)"
-                  /></label>
-                  <button
-                    type="button"
-                    class="text-sm text-danger underline"
-                    (click)="cfg.windows.splice(i, 1)"
-                  >
-                    {{ t('calls-remove-window') }}
-                  </button>
-                </div>
-              }
-              @if (cfg.teacher_id) {
-                <div class="grid gap-3 sm:grid-cols-2">
-                  <label class="flex flex-col gap-1 text-sm"
-                    >{{ t('calls-start')
-                    }}<input
-                      type="datetime-local"
-                      class="min-w-0 w-full rounded-md border border-border bg-input p-3"
-                      [(ngModel)]="windowStart"
-                  /></label>
-                  <label class="flex flex-col gap-1 text-sm"
-                    >{{ t('calls-end')
-                    }}<input
-                      type="datetime-local"
-                      class="min-w-0 w-full rounded-md border border-border bg-input p-3"
-                      [(ngModel)]="windowEnd"
-                  /></label>
-                </div>
-                <button
-                  type="button"
-                  class="w-fit rounded-md border border-border px-3 py-2"
-                  (click)="addWindow()"
-                >
-                  {{ t('calls-add-window') }}
-                </button>
-              }
+              <p class="text-sm text-text-muted">{{ t('calls-duration-help') }}</p>
               <button
                 type="button"
                 class="inline-flex w-fit items-center gap-2 rounded-md bg-primary px-4 py-2 text-text-inverse disabled:opacity-50"
@@ -176,20 +116,8 @@ export class CallLesson implements OnInit {
   readonly error = signal('');
   readonly busy = signal(false);
   readonly saved = signal(false);
-  readonly zones = Array.from(
-    new Set([
-      Intl.DateTimeFormat().resolvedOptions().timeZone,
-      'UTC',
-      ...Intl.supportedValuesOf('timeZone'),
-    ]),
-  );
-  windowStart = '';
-  windowEnd = '';
   t(key: string) {
     return this.i18n.format(key);
-  }
-  local(epoch: number, zone: string) {
-    return localCallInput(epoch, zone);
   }
   hasBooking() {
     return this.bookings().some((c) => c.status !== 'cancelled');
@@ -203,7 +131,6 @@ export class CallLesson implements OnInit {
         this.api.callSettings(this.key()),
         this.api.calls(),
       ]);
-      if (cfg.version === 0) cfg.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
       if (!this.settings()) this.expanded.set(!cfg.teacher_id);
       this.settings.set(cfg);
       this.bookings.set(
@@ -217,31 +144,6 @@ export class CallLesson implements OnInit {
       if (this.session.isAdmin()) this.teachers.set((await this.api.callTeachers()).teachers);
     } catch {
       this.error.set(this.t('error-generic'));
-    }
-  }
-  editWindow(i: number, field: 'starts_at' | 'ends_at', value: string) {
-    try {
-      const cfg = this.settings()!;
-      cfg.windows[i][field] = localCallTime(value, cfg.timezone);
-      this.saved.set(false);
-      this.error.set('');
-    } catch {
-      this.error.set(this.t('calls-invalid-time'));
-    }
-  }
-  addWindow() {
-    try {
-      const cfg = this.settings()!;
-      const start = localCallTime(this.windowStart, cfg.timezone);
-      const end = localCallTime(this.windowEnd, cfg.timezone);
-      if (start <= Date.now() / 1000 || end <= start) throw new Error();
-      cfg.windows.push({ id: '', starts_at: start, ends_at: end });
-      this.windowStart = '';
-      this.windowEnd = '';
-      this.saved.set(false);
-      this.error.set('');
-    } catch {
-      this.error.set(this.t('calls-invalid-time'));
     }
   }
   async save() {

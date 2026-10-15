@@ -8,7 +8,7 @@ import { I18nService } from '../core/i18n.service';
 import { Icon } from './icon';
 import { Spinner } from './loading';
 
-type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
+type NavId = 'courses' | 'calls' | 'schedule' | 'users' | 'practices' | 'settings' | null;
 
 @Component({
   selector: 'app-sidebar',
@@ -86,6 +86,19 @@ type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
           >
             <app-icon name="clock" /><span class="hidden lg:inline">{{ t('nav-calls') }}</span>
           </a>
+
+          @if (session.user()?.role === 'teacher') {
+            <a
+              routerLink="/calls/schedule"
+              [attr.aria-label]="t('calls-schedule-title')"
+              class="flex items-center justify-center gap-3 rounded-md px-3 py-2.5 lg:justify-start"
+              [class]="navItemClass(isActive('schedule'))"
+            >
+              <app-icon name="calendar-days" /><span class="hidden lg:inline">{{
+                t('calls-schedule-title')
+              }}</span>
+            </a>
+          }
 
           <a
             [routerLink]="session.seesAllCourses() ? '/practices' : '/my-practices'"
@@ -187,6 +200,17 @@ type NavId = 'courses' | 'calls' | 'users' | 'practices' | 'settings' | null;
             t('nav-calls')
           }}</span>
         </a>
+        @if (session.user()?.role === 'teacher') {
+          <a
+            routerLink="/calls/schedule"
+            [attr.aria-label]="t('calls-schedule-title')"
+            class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
+            [class]="isActive('schedule') ? 'text-primary' : 'text-text-secondary'"
+          >
+            <app-icon name="calendar-days" extra="h-5 w-5" />
+            <span class="font-body text-[12px]">{{ t('calls-schedule-title') }}</span>
+          </a>
+        }
         <a
           [routerLink]="session.seesAllCourses() ? '/practices' : '/my-practices'"
           class="flex flex-1 flex-col items-center gap-1 rounded-md py-1"
@@ -254,6 +278,9 @@ export class Sidebar {
     const url = this.currentUrl().split(/[?#]/, 1)[0];
     if (id === 'calls') {
       return url === '/calls';
+    }
+    if (id === 'schedule') {
+      return url.startsWith('/calls/schedule');
     }
     if (id === 'users') {
       return url === '/users' || url === '/students/new';
