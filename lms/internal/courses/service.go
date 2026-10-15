@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"math/big"
 	"strings"
 
 	"github.com/andreyfesunov/dino_lms/lms/internal/kernel"
@@ -174,23 +175,50 @@ func LessonKey(chapterID, lessonID string) string {
 	return chapterID + "/" + lessonID
 }
 
-// CourseProgress is the percentage of completed lessons (0-100).
+// CourseProgress averages chapter progress so every non-empty chapter has
+// equal weight, regardless of how many lessons it contains.
 func (s *CourseService) CourseProgress(course *CourseConfig, completed []string) uint8 {
-	total := course.TotalLessons()
-	if total == 0 {
+	if len(course.Chapters) == 0 {
 		return 0
 	}
-	validKeys := map[string]bool{}
-	for _, pair := range course.LessonPairs() {
-		validKeys[LessonKey(pair.Chapter.ID, pair.Lesson.ID)] = true
-	}
-	done := 0
+
+	doneKeys := make(map[string]struct{}, len(completed))
 	for _, key := range completed {
-		if validKeys[key] {
-			done++
-		}
+		doneKeys[key] = struct{}{}
 	}
-	return percent(done, total)
+
+	chapterProgress := new(big.Rat)
+	weightedChapters := int64(0)
+	for _, chapter := range course.Chapters {
+		lessons := len(chapter.Lessons)
+		if lessons == 0 {
+			continue
+		}
+		done := int64(0)
+		for _, lesson := range chapter.Lessons {
+			if _, ok := doneKeys[LessonKey(chapter.ID, lesson.ID)]; ok {
+				done++
+			}
+		}
+		chapterProgress.Add(chapterProgress, new(big.Rat).SetFrac64(done, int64(lessons)))
+		weightedChapters++
+	}
+	if weightedChapters == 0 {
+		return 0
+	}
+
+	// Keep the average exact until converting it to the integer percentage sent
+	// to the UI. Round to the nearest whole percent without floating point math.
+	chapterProgress.Mul(chapterProgress, big.NewRat(100, weightedChapters))
+	quotient, remainder := new(big.Int), new(big.Int)
+	quotient.QuoRem(chapterProgress.Num(), chapterProgress.Denom(), remainder)
+	if new(big.Int).Lsh(remainder, 1).Cmp(chapterProgress.Denom()) >= 0 {
+		quotient.Add(quotient, big.NewInt(1))
+	}
+	if quotient.Cmp(big.NewInt(100)) > 0 {
+		return 100
+	}
+	return uint8(quotient.Int64())
 }
 
 // ChapterProgress is the percentage of completed lessons in one chapter.
