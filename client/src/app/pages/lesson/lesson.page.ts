@@ -1,9 +1,10 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ApiService } from '../../core/api.service';
 import { LessonResponse } from '../../core/api.types';
 import { I18nService } from '../../core/i18n.service';
+import { SessionStore } from '../../core/session.store';
 import { Icon } from '../../shared/icon';
 import { CallLesson } from '../../shared/call-lesson';
 import { CodeBlocks } from '../../shared/code-blocks';
@@ -188,7 +189,7 @@ import { Skeleton, Spinner } from '../../shared/loading';
           </section>
         }
 
-        @if (l.type === 'practice') {
+        @if (l.type === 'practice' && isStudent()) {
           <section
             class="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:p-5"
           >
@@ -380,6 +381,9 @@ export class LessonPage {
   private i18n = inject(I18nService);
   private activatedRoute = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private session = inject(SessionStore);
+
+  readonly isStudent = computed(() => this.session.user()?.role === 'student');
 
   readonly lesson = signal<LessonResponse | null>(null);
   readonly done = signal(false);
@@ -416,6 +420,9 @@ export class LessonPage {
     this.loading.set(true);
     this.lesson.set(null);
     this.done.set(false);
+    this.practiceAttempts.set([]);
+    this.practiceCanSubmit.set(false);
+    this.practiceError.set(null);
     try {
       this.error.set(null);
       const lesson = await this.api.lesson(
@@ -426,7 +433,7 @@ export class LessonPage {
       if (generation !== this.loadGeneration) return;
       this.lesson.set(lesson);
       this.done.set(lesson.done);
-      if (lesson.type === 'practice') {
+      if (lesson.type === 'practice' && this.isStudent()) {
         const result = await this.api.practiceAttempts(
           lesson.course.id,
           lesson.chapter.id,
@@ -503,7 +510,7 @@ export class LessonPage {
 
   async submitPractice(): Promise<void> {
     const lesson = this.lesson();
-    if (!lesson || this.practiceSubmitting() || !this.repositoryUrl.trim()) return;
+    if (!lesson || !this.isStudent() || this.practiceSubmitting() || !this.repositoryUrl.trim()) return;
     this.practiceSubmitting.set(true);
     this.practiceError.set(null);
     try {
